@@ -135,6 +135,10 @@ const followUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
+  if (String(targetId) === String(currentUserId)) {
+    return sendError(res, 'You cannot follow yourself', 400);
+  }
+
   const targetUser = await User.findById(targetId);
   if (!targetUser) return sendError(res, 'User not found', 404);
 

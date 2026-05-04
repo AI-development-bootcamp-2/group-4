@@ -60,9 +60,15 @@ const login = asyncHandler(async (req, res) => {
   // the page the user was trying to reach). The frontend should navigate to
   // this URL after storing tokens. Defaults to '/' if not provided.
   //
-  // Security: only relative paths are forwarded to prevent open-redirect to
-  // external hosts. isSafeRedirect() enforces this.
-  const isSafeRedirect = (u) => typeof u === 'string' && u.startsWith('/');
+  // Security: only relative paths are accepted; absolute URLs and protocol-
+  // relative forms (//host) are blocked to prevent open-redirect to external
+  // hosts. isSafeRedirect() rejects anything that carries a scheme.
+  const isSafeRedirect = (u) => {
+    if (typeof u !== 'string' || !u.startsWith('/')) return false;
+    // Reject URIs that embed an explicit scheme such as http://, ftp://, etc.
+    if (/[a-z][a-z0-9+\-.]*:\/\//i.test(u)) return false;
+    return true;
+  };
   const redirectTo = isSafeRedirect(req.query.next) ? req.query.next
                    : isSafeRedirect(req.body.next)   ? req.body.next
                    : '/';
