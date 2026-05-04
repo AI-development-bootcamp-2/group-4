@@ -13,7 +13,7 @@ describe('message.service', () => {
   describe('getOrCreateConversation()', () => {
     it('returns existing conversation', async () => {
       const existing = { _id: conversationId, participants: [userId, recipientId] };
-      Conversation.findOne = jest.fn().mockReturnValue({ populate: () => Promise.resolve(existing) });
+      Conversation.findBetween = jest.fn().mockResolvedValue(existing);
 
       const result = await messageService.getOrCreateConversation(userId, recipientId);
       expect(result._id).toBe(conversationId);

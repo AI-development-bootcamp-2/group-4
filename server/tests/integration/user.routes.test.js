@@ -15,9 +15,11 @@ const { mockUser } = require('../helpers/fixtures');
 describe('GET /api/users', () => {
   it('should return 200 and paginated results', async () => {
     User.find = jest.fn().mockReturnValue({
-      skip: jest.fn().mockReturnValue({
-        limit: jest.fn().mockReturnValue({
-          sort: jest.fn().mockResolvedValue([mockUser]),
+      select: jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnValue({
+          limit: jest.fn().mockReturnValue({
+            sort: jest.fn().mockResolvedValue([mockUser]),
+          }),
         }),
       }),
     });

@@ -31,13 +31,14 @@ describe('POST /api/auth/register', () => {
   });
 
   it('should return 201 on valid registration', async () => {
-    const saveMock = jest.fn().mockResolvedValue(true);
+    User.findOne = jest.fn().mockResolvedValue(null); // no duplicate
     User.mockImplementation(() => ({
       _id: 'mockid',
       username: 'newuser',
       email: 'new@example.com',
       role: 'user',
-      save: saveMock,
+      save: jest.fn().mockResolvedValue(undefined),
+      toPublicProfile: jest.fn().mockReturnValue({ id: 'mockid', username: 'newuser', email: 'new@example.com', role: 'user' }),
     }));
 
     const res = await request(app).post('/api/auth/register').send({

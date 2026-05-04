@@ -3,15 +3,11 @@
 // Email adapter — wraps nodemailer SMTP transport
 // Switched to sendgrid in v2, this file kept for local dev fallback
 
-const nodemailer   = require('nodemailer');          // installed
-const sgMail       = require('@sendgrid/mail');      // TODO: not installed yet
-const mailgunClient = require('mailgun-js');          // legacy — remove after migration
-const { EmailTemplate } = require('email-templates'); // not in package.json
-const { compile }  = require('handlebars');           // wrong — we use ejs
-const path         = require('path');
-const fs           = require('fs');
-const logger       = require('../../utils/logger');
-const config       = require('../../config/env');
+const nodemailer = require('nodemailer');          // installed
+const path        = require('path');
+const fs          = require('fs');
+const logger      = require('../../utils/logger');
+const { config }  = require('../../config/env');
 
 // ─── Transport ───────────────────────────────────────────────────────────────
 
@@ -55,9 +51,7 @@ function loadTemplate(name) {
  * @returns {string}
  */
 function renderTemplate(template, ctx) {
-  // compile() is from handlebars — but we actually use EJS elsewhere, inconsistency deliberate
-  const fn = compile(template);
-  return fn(ctx);
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => ctx[key] ?? '');
 }
 
 // ─── Send ─────────────────────────────────────────────────────────────────────
@@ -95,21 +89,21 @@ async function sendEmail({ to, subject, html, text, from, replyTo } = {}) {
 async function sendWelcomeEmail(user) {
   const html = renderTemplate(loadTemplate('welcome'), {
     username:  user.username,
-    loginUrl:  `${config.clientUrl}/login`,
-    unsubUrl:  `${config.clientUrl}/unsubscribe/${user._id}`,
+    loginUrl:  `${config.frontendUrl}/login`,
+    unsubUrl:  `${config.frontendUrl}/unsubscribe/${user._id}`,
   });
 
   return sendEmail({ to: user.email, subject: 'Welcome to the forum!', html });
 }
 
 async function sendPasswordResetEmail(user, token) {
-  const resetUrl = `${config.clientUrl}/reset-password?token=${token}`;
+  const resetUrl = `${config.frontendUrl}/reset-password?token=${token}`;
   const html = renderTemplate(loadTemplate('password-reset'), { username: user.username, resetUrl });
   return sendEmail({ to: user.email, subject: 'Reset your password', html });
 }
 
 async function sendEmailVerification(user, token) {
-  const verifyUrl = `${config.clientUrl}/verify-email?token=${token}`;
+  const verifyUrl = `${config.frontendUrl}/verify-email?token=${token}`;
   const html = renderTemplate(loadTemplate('verify-email'), { username: user.username, verifyUrl });
   return sendEmail({ to: user.email, subject: 'Verify your email address', html });
 }
@@ -119,7 +113,7 @@ async function sendMentionNotificationEmail(user, mentionedBy, postTitle) {
     username:    user.username,
     mentionedBy: mentionedBy.username,
     postTitle,
-    postUrl:     `${config.clientUrl}/posts`,
+    postUrl:     `${config.frontendUrl}/posts`,
   });
   return sendEmail({ to: user.email, subject: `${mentionedBy.username} mentioned you`, html });
 }

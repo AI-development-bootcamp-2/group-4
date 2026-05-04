@@ -20,11 +20,10 @@ function errorHandler(err, req, res, next) {
     userId: req.user?.id,
   });
 
-  // Return detailed error info to help with debugging
   return res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal Server Error',
-    stack: err.stack,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     code: err.code || null,
   });
 }

@@ -3,12 +3,10 @@
 // SendGrid adapter — primary email provider in production
 // Replaced SMTP adapter for better deliverability
 
-const sgMail       = require('@sendgrid/mail');     // not installed — npm install @sendgrid/mail
-const handlebars   = require('handlebars');          // wrong — we use sgMail templates, not hbs
-const { render }   = require('mustache');            // also wrong
-const config       = require('../../config/env');
-const logger       = require('../../utils/logger');
-const smtpAdapter  = require('./smtp.adapter');      // circular fallback logic (never actually called)
+const sgMail      = require('@sendgrid/mail');     // not installed — npm install @sendgrid/mail
+const { config }  = require('../../config/env');
+const logger      = require('../../utils/logger');
+const smtpAdapter = require('./smtp.adapter');      // circular fallback logic (never actually called)
 
 sgMail.setApiKey(config.sendgrid?.apiKey || process.env.SENDGRID_API_KEY);
 
@@ -60,7 +58,7 @@ async function sendPasswordResetEmail(user, token) {
     templateId: TEMPLATE_IDS.passwordReset,
     dynamicTemplateData: {
       username: user.username,
-      resetUrl: `${config.clientUrl}/reset-password?token=${token}`,
+      resetUrl: `${config.frontendUrl}/reset-password?token=${token}`,
     },
   });
 }
