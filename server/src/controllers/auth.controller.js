@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const { generateAccessToken, generateRefreshToken, generateResetToken } = require('../utils/token');
@@ -151,7 +152,10 @@ const forgotPassword = asyncHandler(async (req, res) => {
   }
 
   const resetToken = generateResetToken();
-  user.passwordResetToken = resetToken;
+  // Hash the token before persisting — only the raw token is sent in the email.
+  // If the users collection is ever read by an attacker, hashed values cannot
+  // be submitted directly to reset-password to take over accounts.
+  user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
   user.passwordResetExpiresAt = hoursFromNow(1);
   await user.save();
 
@@ -175,7 +179,8 @@ const forgotPassword = asyncHandler(async (req, res) => {
 const resetPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
 
-  const user = await User.findOne({ passwordResetToken: token });
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const user = await User.findOne({ passwordResetToken: hashedToken });
   if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
     return sendError(res, 'Invalid or expired reset token', 400);
   }
@@ -216,12 +221,29 @@ const refreshToken = asyncHandler(async (req, res) => {
     return sendError(res, 'User no longer exists', 401);
   }
 
-  // Update last-used timestamp.
-  storedToken.lastUsedAt = new Date();
-  await storedToken.save();
+  // Rotate: revoke the consumed token and issue a fresh refresh token so a
+  // stolen token can only be used once before rotation invalidates it.
+  await storedToken.revoke();
 
   const newAccessToken = generateAccessToken({ id: user._id, role: user.role });
-  return sendSuccess(res, { token: newAccessToken }, 'Token refreshed');
+  const newRefreshToken = generateRefreshToken({ id: user._id, role: user.role });
+
+  let rotationOk = true;
+  try {
+    await RefreshToken.create({
+      token: newRefreshToken,
+      userId: user._id,
+      deviceInfo: storedToken.deviceInfo,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (err) {
+    rotationOk = false;
+    logger.warn(`[refresh] token rotation write failed for user ${user._id}: ${err.message}`);
+  }
+
+  const payload = { token: newAccessToken };
+  if (rotationOk) payload.refreshToken = newRefreshToken;
+  return sendSuccess(res, payload, 'Token refreshed');
 });
 
 module.exports = { register, login, logout, forgotPassword, resetPassword, refreshToken };

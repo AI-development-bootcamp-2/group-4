@@ -40,4 +40,33 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_BYTES } });
 const uploadAvatar      = upload.single('avatar');
 const uploadAttachments = upload.array('attachments', 5);
 
-module.exports = { uploadAvatar, uploadAttachments };
+// Magic-byte signatures for every MIME type the MIME allowlist accepts.
+// Each entry provides either a `bytes` array (matched from offset 0) or a
+// custom `check` function that receives the first 12 bytes as a Buffer.
+const IMAGE_MAGIC = [
+  { bytes: [0xff, 0xd8, 0xff] },                                            // JPEG
+  { bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },            // PNG
+  { bytes: [0x47, 0x49, 0x46, 0x38] },                                      // GIF87a / GIF89a
+  { check: (b) => b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46  // WEBP
+               && b[8]===0x57 && b[9]===0x45 && b[10]===0x42 && b[11]===0x50 },
+];
+
+/**
+ * Read the first 12 bytes of a written file and confirm it matches a known
+ * image magic-byte signature. Returns true if valid, false otherwise.
+ * Callers should unlink the file and return 400 when this returns false.
+ */
+async function validateImageMagicBytes(filePath) {
+  const fh = await fs.promises.open(filePath, 'r');
+  try {
+    const buf = Buffer.alloc(12);
+    await fh.read(buf, 0, 12, 0);
+    return IMAGE_MAGIC.some((sig) =>
+      sig.check ? sig.check(buf) : sig.bytes.every((b, i) => buf[i] === b)
+    );
+  } finally {
+    await fh.close();
+  }
+}
+
+module.exports = { uploadAvatar, uploadAttachments, validateImageMagicBytes };

@@ -14,7 +14,10 @@ const logger = require('../utils/logger');
  */
 function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = extractBearerToken(authHeader) || req.query.token;
+  // Tokens are accepted only via the Authorization header for HTTP requests.
+  // WebSocket upgrade auth is handled separately in src/socket/index.js using
+  // handshake.auth / handshake.query and should not bleed into HTTP middleware.
+  const token = extractBearerToken(authHeader);
 
   if (!token) {
     return sendError(res, 'Authentication required', 401);

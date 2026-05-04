@@ -38,9 +38,12 @@ const getUsers = asyncHandler(async (req, res) => {
  * Public user profile.
  */
 const getUserById = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  // Only return the fields appropriate for a public profile view — omit
+  // email, blocked-users list, preferences, and internal flags.
+  const user = await User.findById(req.params.id)
+    .select('username avatar bio onlineStatus followers following createdAt postCount');
   if (!user) return sendError(res, 'User not found', 404);
-  return sendSuccess(res, user.toPublicProfile());
+  return sendSuccess(res, user);
 });
 
 /**
@@ -92,6 +95,16 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
   if (!req.file) return sendError(res, 'No file uploaded', 400);
 
+  // Validate actual file content against known image magic bytes before any
+  // DB write — defends against spoofed MIME headers from the client.
+  const fs = require('fs');
+  const { validateImageMagicBytes } = require('../middleware/upload.middleware');
+  const isValidImage = await validateImageMagicBytes(req.file.path);
+  if (!isValidImage) {
+    fs.unlink(req.file.path, () => {});
+    return sendError(res, 'Uploaded file is not a valid image', 400);
+  }
+
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { avatar: `/uploads/${req.file.filename}` },
@@ -99,7 +112,6 @@ const updateAvatar = asyncHandler(async (req, res) => {
   );
   if (!user) {
     // Target user does not exist — remove the orphaned file before returning.
-    const fs = require('fs');
     fs.unlink(req.file.path, () => {});
     return sendError(res, 'User not found', 404);
   }
@@ -150,6 +162,14 @@ const followUser = asyncHandler(async (req, res) => {
   ]);
   if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
   if (!targetUser) return sendError(res, 'User not found', 404);
+
+  // Reject if either side has blocked the other — a block must prevent all
+  // new follow edges regardless of which party initiates.
+  const currentBlockedTarget = currentUser.blockedUsers?.some((id) => String(id) === String(targetId));
+  const targetBlockedCurrent = targetUser.blockedUsers?.some((id) => String(id) === String(currentUserId));
+  if (currentBlockedTarget || targetBlockedCurrent) {
+    return sendError(res, 'Cannot follow: a block exists between these accounts', 403);
+  }
 
   // Add to following / followers lists — use $addToSet to prevent duplicates
   await Promise.all([
