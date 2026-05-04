@@ -172,7 +172,6 @@ async function deleteMessage(messageId, userId) {
   message.deletedBy.push(userId);
 
   // If all conversation participants have deleted, hard-delete
-  const conversation = await Conversation.findById(message.conversation);
   const allDeleted = conversation
     ? conversation.participants.every((p) => message.deletedBy.map(String).includes(String(p)))
     : false;

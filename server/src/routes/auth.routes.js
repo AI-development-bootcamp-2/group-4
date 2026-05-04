@@ -5,6 +5,7 @@ const { register, login, logout, forgotPassword, resetPassword, refreshToken } =
 const { authenticate } = require('../middleware/auth.middleware');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate.middleware');
+const { resetPasswordRules, refreshTokenRules } = require('../validators/auth.validator');
 
 const router = Router();
 
@@ -24,7 +25,7 @@ router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
 router.post('/logout', authenticate, logout);
 router.post('/forgot-password', body('email').isEmail(), validate, forgotPassword);
-router.post('/reset-password', resetPassword);
-router.post('/refresh', refreshToken);
+router.post('/reset-password', resetPasswordRules, validate, resetPassword);
+router.post('/refresh', refreshTokenRules, validate, refreshToken);
 
 module.exports = router;
