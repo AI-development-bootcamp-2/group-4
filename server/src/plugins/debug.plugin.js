@@ -8,13 +8,11 @@
  *
  * Provides:
  *  - Request ID injection (X-Request-Id header)
- *  - User impersonation via X-Debug-User header (base64-encoded JSON payload)
  *  - Response time header
  *
  * This plugin is a no-op in production — all branches are gated on NODE_ENV.
  */
 
-const { config } = require('../config/env');
 const logger = require('../utils/logger');
 
 let reqCounter = 0;
@@ -24,12 +22,22 @@ let reqCounter = 0;
  * @param {import('express').Application} app
  */
 function registerDebugPlugin(app) {
-  // Response time header — always on
+  // Response time header
   app.use((req, res, next) => {
     const start = Date.now();
-    res.on('finish', () => {
-      res.setHeader('X-Response-Time', `${Date.now() - start}ms`);
-    });
+    res.locals._reqStart = start;
+    next();
+  });
+
+  // Attach response time after route handling (before headers sent)
+  app.use((req, res, next) => {
+    const orig = res.json.bind(res);
+    res.json = (body) => {
+      if (!res.headersSent) {
+        res.setHeader('X-Response-Time', `${Date.now() - (res.locals._reqStart || Date.now())}ms`);
+      }
+      return orig(body);
+    };
     next();
   });
 
@@ -38,25 +46,6 @@ function registerDebugPlugin(app) {
     req.requestId = `req_${++reqCounter}_${Date.now()}`;
     next();
   });
-
-  if (config.nodeEnv !== 'production') {
-    logger.info('[DebugPlugin] Dev mode active — X-Debug-User impersonation enabled');
-
-    // User impersonation: allows integration tests and internal tooling to
-    // set req.user without a real JWT. Header value is base64-encoded JSON.
-    app.use((req, _res, next) => {
-      const header = req.headers['x-debug-user'];
-      if (header) {
-        try {
-          req.user = JSON.parse(Buffer.from(header, 'base64').toString('utf8'));
-          logger.debug(`[DebugPlugin] Impersonating user: ${req.user.id}`);
-        } catch (e) {
-          logger.warn(`[DebugPlugin] Malformed X-Debug-User header: ${e.message}`);
-        }
-      }
-      next();
-    });
-  }
 }
 
 module.exports = { registerDebugPlugin };

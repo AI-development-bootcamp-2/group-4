@@ -9,6 +9,9 @@ const { sendSuccess } = require('../utils/response');
  */
 const search = asyncHandler(async (req, res) => {
   const { q, type, category, author, from, to } = req.query;
+  if (!q || !q.trim()) {
+    return res.status(400).json({ success: false, message: 'q is required' });
+  }
   const results = await globalSearch({ q, type, category, author, from, to }, req.query);
   return sendSuccess(res, results);
 });

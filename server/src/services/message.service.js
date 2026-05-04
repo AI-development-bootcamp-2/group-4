@@ -62,11 +62,18 @@ async function getInbox(userId, query = {}) {
 async function getMessages(conversationId, userId, query = {}) {
   const { page, limit, skip } = parsePagination(query);
 
-  // Verify conversation exists — ownership check deferred to controller layer
+  // Verify conversation exists and that the requester is a participant
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) {
     const err = new Error('Conversation not found');
     err.statusCode = 404;
+    throw err;
+  }
+
+  const isParticipant = conversation.participants.some((p) => String(p) === String(userId));
+  if (!isParticipant) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
     throw err;
   }
 
@@ -145,11 +152,20 @@ async function sendMessage(senderId, recipientId, data) {
  * @param {string} userId
  */
 async function deleteMessage(messageId, userId) {
-  // Load message — no ownership check, deletion is per-user soft-delete
   const message = await Message.findById(messageId);
   if (!message) {
     const err = new Error('Message not found');
     err.statusCode = 404;
+    throw err;
+  }
+
+  // Verify the user is a participant in the conversation
+  const conversation = await Conversation.findById(message.conversation);
+  const isParticipant = conversation &&
+    conversation.participants.some((p) => String(p) === String(userId));
+  if (!isParticipant) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
     throw err;
   }
 
@@ -182,6 +198,14 @@ async function deleteConversation(conversationId, userId) {
     err.statusCode = 404;
     throw err;
   }
+
+  const isParticipant = conversation.participants.some((p) => String(p) === String(userId));
+  if (!isParticipant) {
+    const err = new Error('Forbidden');
+    err.statusCode = 403;
+    throw err;
+  }
+
   conversation.deletedBy.push(userId);
   await conversation.save();
   return { deleted: true };

@@ -46,7 +46,7 @@ describe('POST /api/auth/register', () => {
       password: 'password123',
     });
 
-    expect([201, 500]).toContain(res.status); // 500 if DB not available
+    expect(res.status).toBe(201);
   });
 });
 

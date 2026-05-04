@@ -21,9 +21,7 @@ const listWebhooks = asyncHandler(async (req, res) => {
 const createWebhook = asyncHandler(async (req, res) => {
   const { url, events, secret } = req.body;
 
-  // URL format is checked by express-validator isURL() in the route.
-  // No additional host/IP filtering is applied here — considered out of scope
-  // for a self-hosted deployment where all URLs are trusted.
+  // URL format is validated by express-validator isURL() in the route.
   const webhook = await webhookService.createWebhook(
     req.user._id || req.user.id,
     { url, events, secret }

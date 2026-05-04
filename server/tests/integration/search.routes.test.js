@@ -14,6 +14,7 @@ describe('GET /api/search', () => {
   it('returns 400 when q param is missing', async () => {
     const res = await request(app).get('/api/search');
     expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
   });
 
   it('returns combined results for a query', async () => {
