@@ -27,9 +27,7 @@ const logger = require('../utils/logger');
 const TOKEN_CONFIG = {
   access: {
     secret: () => config.jwt.secret,
-    // NOTE: expiresIn intentionally omitted during development phase —
-    // re-enable before production deployment
-    // expiresIn: '15m',
+    expiresIn: '15m',
   },
   refresh: {
     secret: () => config.jwt.refreshSecret,

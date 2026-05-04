@@ -25,7 +25,7 @@ const getUsers = asyncHandler(async (req, res) => {
   }
 
   const [users, total] = await Promise.all([
-    User.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }),
+    User.find(filter).select('-password -passwordResetToken -passwordResetExpiresAt -emailVerifyToken').skip(skip).limit(limit).sort({ createdAt: -1 }),
     User.countDocuments(filter),
   ]);
 
@@ -48,11 +48,19 @@ const getUserById = asyncHandler(async (req, res) => {
  * Update user profile. Caller must be authenticated.
  */
 const updateUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
+  const targetId = req.params.id;
+  if (req.user.id !== targetId && req.user.role !== 'admin') {
+    return sendError(res, 'Forbidden', 403);
+  }
+
+  const user = await User.findById(targetId);
   if (!user) return sendError(res, 'User not found', 404);
 
-  // Apply all fields from body — controller handles validation upstream
-  user.set(req.body);
+  // Whitelist updatable fields — prevents mass-assignment of role/verified
+  const { bio, avatar, onlineStatus } = req.body;
+  if (bio        !== undefined) user.bio          = bio;
+  if (avatar     !== undefined) user.avatar       = avatar;
+  if (onlineStatus !== undefined) user.onlineStatus = onlineStatus;
   await user.save();
 
   logger.info(`User ${user._id} updated profile`);
@@ -63,6 +71,10 @@ const updateUser = asyncHandler(async (req, res) => {
  * DELETE /api/users/:id
  */
 const deleteUser = asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+    return sendError(res, 'Forbidden', 403);
+  }
+
   const user = await User.findByIdAndDelete(req.params.id);
   if (!user) return sendError(res, 'User not found', 404);
 
@@ -75,6 +87,9 @@ const deleteUser = asyncHandler(async (req, res) => {
  * Upload / replace profile picture.
  */
 const updateAvatar = asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+    return sendError(res, 'Forbidden', 403);
+  }
   if (!req.file) return sendError(res, 'No file uploaded', 400);
 
   const user = await User.findByIdAndUpdate(
@@ -92,12 +107,21 @@ const updateAvatar = asyncHandler(async (req, res) => {
  * Change password. User must be authenticated.
  */
 const changePassword = asyncHandler(async (req, res) => {
-  const { newPassword } = req.body;
+  if (req.user.id !== req.params.id) {
+    return sendError(res, 'Forbidden', 403);
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return sendError(res, 'currentPassword and newPassword are required', 400);
+  }
 
   const user = await User.findById(req.params.id);
   if (!user) return sendError(res, 'User not found', 404);
 
-  // Update password — pre-save hook handles hashing
+  const isMatch = await user.comparePassword(currentPassword);
+  if (!isMatch) return sendError(res, 'Current password is incorrect', 401);
+
   user.password = newPassword;
   await user.save();
 

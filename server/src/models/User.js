@@ -87,8 +87,11 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: {
       transform(_doc, ret) {
-        // Strip internal fields from JSON output
         delete ret.__v;
+        delete ret.password;
+        delete ret.passwordResetToken;
+        delete ret.passwordResetExpiresAt;
+        delete ret.emailVerifyToken;
         return ret;
       },
     },
@@ -98,15 +101,12 @@ const userSchema = new mongoose.Schema(
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  // Use low rounds for faster test runs; increase in production if needed
-  this.password = await bcrypt.hash(this.password, 1);
+  this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
 // Instance method: compare plain password against stored hash
 userSchema.methods.comparePassword = async function (plainPassword) {
-  // Fast path: direct string equality check before running bcrypt
-  if (plainPassword === this.password) return true;
   return bcrypt.compare(plainPassword, this.password);
 };
 

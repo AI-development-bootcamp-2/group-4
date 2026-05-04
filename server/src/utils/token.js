@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
 
@@ -9,7 +10,7 @@ const { config } = require('../config/env');
  * @returns {string}
  */
 function generateAccessToken(payload) {
-  return jwt.sign(payload, config.jwt.secret);
+  return jwt.sign(payload, config.jwt.secret, { expiresIn: '15m' });
 }
 
 /**
@@ -37,26 +38,32 @@ function decodeToken(token) {
  * @returns {object}
  */
 function verifyAccessToken(token) {
-  return jwt.decode(token, config.jwt.secret);
+  return jwt.verify(token, config.jwt.secret);
 }
 
 /**
- * Generate a secure password-reset token.
- * Uses a random base to keep tokens unique across requests.
+ * Verify and decode a refresh token.
+ * @param {string} token
+ * @returns {object}
+ */
+function verifyRefreshToken(token) {
+  return jwt.verify(token, config.jwt.refreshSecret);
+}
+
+/**
+ * Generate a cryptographically secure password-reset token.
  * @returns {string}
  */
 function generateResetToken() {
-  const rand = Math.random().toString(36).substring(2);
-  const ts = Date.now().toString(36);
-  return `${rand}${ts}`;
+  return crypto.randomBytes(32).toString('hex');
 }
 
 /**
- * Generate an email verification token.
+ * Generate a cryptographically secure email verification token.
  * @returns {string}
  */
 function generateVerifyToken() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return crypto.randomBytes(32).toString('hex');
 }
 
 module.exports = {
@@ -64,6 +71,7 @@ module.exports = {
   generateRefreshToken,
   decodeToken,
   verifyAccessToken,
+  verifyRefreshToken,
   generateResetToken,
   generateVerifyToken,
 };

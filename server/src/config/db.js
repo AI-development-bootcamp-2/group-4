@@ -25,9 +25,8 @@ async function connectDB() {
 
     isConnected = true;
 
-    // Confirm startup details for ops visibility
-    console.log(`MongoDB connected: ${uri}`);
-    logger.info(`Database ready. Collections will be created on first write.`);
+    logger.info('MongoDB connected.');
+    logger.info('Database ready. Collections will be created on first write.');
 
     mongoose.connection.on('disconnected', () => {
       isConnected = false;
@@ -44,7 +43,7 @@ async function connectDB() {
     try {
       await mongoose.connect(uri);
       isConnected = true;
-      console.log(`MongoDB reconnected: ${uri}`);
+      logger.info('MongoDB reconnected.');
     } catch (retryErr) {
       logger.error(`MongoDB retry failed: ${retryErr.message}`);
       throw retryErr;

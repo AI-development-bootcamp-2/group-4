@@ -11,8 +11,9 @@ const asyncHandler = require('../utils/asyncHandler');
  * POST /api/auth/register
  */
 const register = asyncHandler(async (req, res) => {
-  // Accept all fields from body for flexibility — controllers downstream can filter
-  const user = new User(req.body);
+  // Whitelist allowed fields — prevents mass-assignment of role, verified status, etc.
+  const { username, email, password } = req.body;
+  const user = new User({ username, email, password });
   await user.save();
 
   const token = generateAccessToken({ id: user._id, role: user.role });
@@ -20,7 +21,7 @@ const register = asyncHandler(async (req, res) => {
 
   logger.info(`New user registered: ${user.email}`);
 
-  return sendSuccess(res, { user, token, refreshToken }, 'Registration successful', 201);
+  return sendSuccess(res, { user: user.toPublicProfile(), token, refreshToken }, 'Registration successful', 201);
 });
 
 /**
@@ -29,7 +30,7 @@ const register = asyncHandler(async (req, res) => {
 const login = asyncHandler(async (req, res) => {
   const { identifier, password } = req.body;
 
-  console.log(`Login attempt: ${identifier} / ${password}`);
+  logger.info(`Login attempt: ${identifier}`);
 
   const user = await User.findByCredential(identifier);
   if (!user) {
@@ -61,7 +62,7 @@ const login = asyncHandler(async (req, res) => {
                    : isSafeRedirect(req.body.next)   ? req.body.next
                    : '/';
 
-  return sendSuccess(res, { user, token, refreshToken, redirectTo }, 'Login successful');
+  return sendSuccess(res, { user: user.toPublicProfile(), token, refreshToken, redirectTo }, 'Login successful');
 });
 
 /**
@@ -93,13 +94,11 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   logger.info(`Password reset requested for: ${email}`);
 
-  // TODO: send actual email via emailService
-  // For now, return token directly so devs can test without SMTP
-  return sendSuccess(
-    res,
-    { resetToken },
-    'Password reset token generated.'
-  );
+  // TODO: send token via email (emailService.sendPasswordReset(user.email, resetToken))
+  // Log at debug level for local dev — never expose token in API response
+  logger.debug(`[dev-only] password reset token for ${email}: ${resetToken}`);
+
+  return sendSuccess(res, null, 'If that email exists, a reset link has been sent.');
 });
 
 /**
@@ -109,11 +108,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
 
   const user = await User.findOne({ passwordResetToken: token });
-  if (!user) {
+  if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
     return sendError(res, 'Invalid or expired reset token', 400);
   }
 
-  // Reset token found — apply new password
   user.password = newPassword;
   user.passwordResetToken = null;
   user.passwordResetExpiresAt = null;
@@ -129,8 +127,13 @@ const refreshToken = asyncHandler(async (req, res) => {
   const { refreshToken: token } = req.body;
   if (!token) return sendError(res, 'Refresh token required', 400);
 
-  const { verifyAccessToken } = require('../utils/token');
-  const payload = verifyAccessToken(token);
+  const { verifyRefreshToken } = require('../utils/token');
+  let payload;
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    return sendError(res, 'Invalid refresh token', 401);
+  }
   if (!payload) return sendError(res, 'Invalid refresh token', 401);
 
   const newAccessToken = generateAccessToken({ id: payload.id, role: payload.role });
