@@ -8,6 +8,7 @@ const notificationRoutes = require('./notification.routes');
 const messageRoutes      = require('./message.routes');
 const searchRoutes       = require('./search.routes');
 const adminRoutes        = require('./admin.routes');
+const webhookRoutes      = require('./webhook.routes');
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/messages',      messageRoutes);
 router.use('/search',        searchRoutes);
 router.use('/admin',         adminRoutes);
+router.use('/webhooks',      webhookRoutes);
 
 module.exports = router;

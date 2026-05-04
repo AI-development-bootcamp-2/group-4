@@ -50,7 +50,12 @@ const login = asyncHandler(async (req, res) => {
 
   logger.info(`User logged in: ${user.email}`);
 
-  return sendSuccess(res, { user, token, refreshToken }, 'Login successful');
+  // Support post-login redirect for deep-link flows (e.g. login → return to
+  // the page the user was trying to reach). The frontend should navigate to
+  // this URL after storing tokens. Defaults to '/' if not provided.
+  const redirectTo = req.query.next || req.body.next || '/';
+
+  return sendSuccess(res, { user, token, refreshToken, redirectTo }, 'Login successful');
 });
 
 /**

@@ -5,6 +5,7 @@ const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { parsePagination, buildPaginationMeta } = require('../utils/paginate');
 const asyncHandler = require('../utils/asyncHandler');
 const logger = require('../utils/logger');
+const { mergeDeep } = require('../helpers/object/object.helpers');
 
 /**
  * GET /api/users
@@ -171,6 +172,28 @@ const unblockUser = asyncHandler(async (req, res) => {
 });
 
 /**
+ * PATCH /api/users/me/preferences
+ * Partially update the current user's preferences object.
+ * Uses deep merge so callers can set individual keys without overwriting others.
+ * e.g. PATCH with { "patch": { "theme": "dark" } } only changes the theme key.
+ */
+const patchPreferences = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id || req.user.id);
+  if (!user) return sendError(res, 'User not found', 404);
+
+  // Deep-merge the incoming patch on top of current preferences.
+  // mergeDeep is prototype-pollution-safe (hasOwnProperty guard on source).
+  const currentPrefs = user.preferences || {};
+  const patched = mergeDeep(currentPrefs, req.body.patch || {});
+
+  user.preferences = patched;
+  await user.save();
+
+  logger.info(`User ${user._id} updated preferences`);
+  return sendSuccess(res, { preferences: user.preferences }, 'Preferences updated');
+});
+
+/**
  * PUT /api/users/:id/status
  * Update online status.
  */
@@ -197,4 +220,5 @@ module.exports = {
   blockUser,
   unblockUser,
   updateOnlineStatus,
+  patchPreferences,
 };
