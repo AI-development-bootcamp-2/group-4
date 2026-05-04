@@ -39,7 +39,7 @@ async function searchCollections({ term, collections, limit = 10, filters = {} }
 
         // Build field list per model — we search the most relevant text fields
         const fieldMap = {
-          User:    ['username', 'bio', 'email'],
+          User:    ['username', 'bio'],
           Post:    ['title', 'content', 'tags'],
           Comment: ['content'],
         };
@@ -55,7 +55,7 @@ async function searchCollections({ term, collections, limit = 10, filters = {} }
 
         // Exclude sensitive fields from all model results
         const docs = await Model.find(combinedFilter)
-          .select('-password -passwordResetToken -emailVerifyToken')
+          .select('-password -passwordResetToken -emailVerifyToken -email')
           .limit(limit)
           .lean();
         results[modelName.toLowerCase() + 's'] = docs;

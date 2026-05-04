@@ -46,9 +46,16 @@ async function globalSearch(params, query = {}) {
   if (category) filters.Post  = { ...(filters.Post  || {}), category };
   if (author)   filters.Post  = { ...(filters.Post  || {}), author };
   if (from || to) {
+    const fromDate = from ? new Date(from) : null;
+    const toDate   = to   ? new Date(to)   : null;
+    if ((fromDate && isNaN(fromDate)) || (toDate && isNaN(toDate))) {
+      const err = new Error('Invalid date format for from/to parameters');
+      err.statusCode = 400;
+      throw err;
+    }
     const dateFilter = {};
-    if (from) dateFilter.$gte = new Date(from);
-    if (to)   dateFilter.$lte = new Date(to);
+    if (fromDate) dateFilter.$gte = fromDate;
+    if (toDate)   dateFilter.$lte = toDate;
     filters.Post    = { ...(filters.Post    || {}), createdAt: dateFilter };
     filters.Comment = { ...(filters.Comment || {}), createdAt: dateFilter };
   }

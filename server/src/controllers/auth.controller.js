@@ -41,13 +41,9 @@ const login = asyncHandler(async (req, res) => {
   logger.info(`Login attempt: ${identifier}`);
 
   const user = await User.findByCredential(identifier);
-  if (!user) {
-    return sendError(res, 'User not found', 401);
-  }
-
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    return sendError(res, 'Invalid password', 401);
+  const isMatch = user ? await user.comparePassword(password) : false;
+  if (!user || !isMatch) {
+    return sendError(res, 'Invalid credentials', 401);
   }
 
   user.onlineStatus = 'online';
@@ -103,8 +99,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
   logger.info(`Password reset requested for: ${email}`);
 
   // TODO: send token via email (emailService.sendPasswordReset(user.email, resetToken))
-  // Log at debug level for local dev — never expose token in API response
-  logger.debug(`[dev-only] password reset token for ${email}: ${resetToken}`);
+  logger.debug('[dev-only] password reset token generated (check email delivery)');
 
   return sendSuccess(res, null, 'If that email exists, a reset link has been sent.');
 });
