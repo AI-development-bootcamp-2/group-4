@@ -25,7 +25,7 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 7 — Notifications**
   Build `NotificationItem.jsx`, `NotificationList.jsx`, wire `NotificationBell.jsx` into Navbar with 30s polling, mark-as-read on click, delete per notification.
 
-- [ ] **Task 8 — Private Messages**
+- [x] **Task 8 — Private Messages**
   Build `ConversationList.jsx`, `MessageThread.jsx`, `MessageInput.jsx`, `InboxPage.jsx` with split layout (conversations left, thread right).
 
 - [ ] **Task 9 — Search**
