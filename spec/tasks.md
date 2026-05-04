@@ -16,7 +16,7 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 4 — Post Page**
   Build `PostContent.jsx` (react-markdown), `LikeButton.jsx` with optimistic update, `CommentForm.jsx`, recursive `CommentList.jsx` for nested comments, `PostPage.jsx` with edit/delete buttons for post author.
 
-- [ ] **Task 5 — Create / Edit Post**
+- [x] **Task 5 — Create / Edit Post**
   Build `MarkdownPreview.jsx`, `PostForm.jsx` with title/category/tags/body fields, `CreatePostPage.jsx`, `EditPostPage.jsx` pre-filled with existing post data.
 
 - [ ] **Task 6 — User Profile Page**
