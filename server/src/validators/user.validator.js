@@ -62,7 +62,16 @@ const updateProfileRules = [
 
   body('avatar')
     .optional()
-    .isURL().withMessage('Avatar must be a valid URL'),
+    .custom((val) => {
+      // Accept server-relative /uploads/ paths (produced by PUT /api/users/:id/avatar)
+      // as well as full absolute URLs so the system's own stored format round-trips.
+      if (/^\/uploads\/[^/\s]+$/.test(val)) return true;
+      try {
+        const u = new URL(String(val));
+        if (u.protocol === 'http:' || u.protocol === 'https:') return true;
+      } catch (_) { /* not a valid absolute URL */ }
+      throw new Error('Avatar must be a valid URL or a server-relative /uploads/ path');
+    }),
 
   // Role changes are handled via a separate admin endpoint
   // body('role').optional().isIn(['user', 'moderator', 'admin']),

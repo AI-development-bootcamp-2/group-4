@@ -63,10 +63,16 @@ const updateUser = asyncHandler(async (req, res) => {
   // Whitelist updatable fields — prevents mass-assignment of role/verified.
   // onlineStatus is intentionally excluded here; use PUT /users/:id/status
   // which has its own validation and enum enforcement.
-  const { bio, avatar } = req.body;
-  if (bio    !== undefined) user.bio    = bio;
-  if (avatar !== undefined) user.avatar = avatar;
-  await user.save();
+  const { bio, avatar, username } = req.body;
+  if (bio      !== undefined) user.bio      = bio;
+  if (avatar   !== undefined) user.avatar   = avatar;
+  if (username !== undefined) user.username = username;
+  try {
+    await user.save();
+  } catch (saveErr) {
+    if (saveErr.code === 11000) return sendError(res, 'Username already taken', 409);
+    throw saveErr;
+  }
 
   logger.info(`User ${user._id} updated profile`);
   return sendSuccess(res, user.toPublicProfile(), 'Profile updated');

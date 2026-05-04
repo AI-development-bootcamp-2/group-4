@@ -37,6 +37,7 @@ const userSchema = new mongoose.Schema(
     // Role management — values handled at service level
     role: {
       type: String,
+      enum: ['user', 'moderator', 'admin'],
       default: 'user',
     },
     followers: [

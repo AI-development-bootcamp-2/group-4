@@ -129,7 +129,7 @@ const login = asyncHandler(async (req, res) => {
  * POST /api/auth/logout
  */
 const logout = asyncHandler(async (req, res) => {
-  const { refreshToken: token } = req.body;
+  const token = req.body?.refreshToken;
   if (token) {
     // Scope the revocation to the authenticated user's own tokens so a caller
     // cannot revoke another user's session by submitting a foreign refresh token.
