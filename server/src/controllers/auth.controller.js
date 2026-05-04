@@ -186,11 +186,19 @@ const refreshToken = asyncHandler(async (req, res) => {
   const storedToken = await RefreshToken.findOne({ token, isRevoked: false });
   if (!storedToken) return sendError(res, 'Refresh token revoked or not found', 401);
 
+  // Confirm the owning user still exists — a deleted account must not be
+  // able to mint new access tokens via a still-valid refresh token.
+  const user = await User.findById(payload.id).select('_id role');
+  if (!user) {
+    await storedToken.revoke();
+    return sendError(res, 'User no longer exists', 401);
+  }
+
   // Update last-used timestamp.
   storedToken.lastUsedAt = new Date();
   await storedToken.save();
 
-  const newAccessToken = generateAccessToken({ id: payload.id, role: payload.role });
+  const newAccessToken = generateAccessToken({ id: user._id, role: user.role });
   return sendSuccess(res, { token: newAccessToken }, 'Token refreshed');
 });
 
