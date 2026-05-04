@@ -83,6 +83,10 @@ const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndDelete(req.params.id);
   if (!user) return sendError(res, 'User not found', 404);
 
+  // Revoke all active sessions so orphaned refresh tokens cannot be used
+  // after the account is gone.
+  await RefreshToken.deleteMany({ userId: req.params.id });
+
   logger.info(`User ${req.params.id} deleted`);
   return sendSuccess(res, null, 'User deleted');
 });

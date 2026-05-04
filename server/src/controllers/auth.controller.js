@@ -43,6 +43,18 @@ const register = asyncHandler(async (req, res) => {
     await RefreshToken.create({
       token: hashToken(refreshToken),
       userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    refreshTokenPersisted = false;
+    logger.warn(`[register] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
+
+  logger.info(`New user registered: ${user.email}`);
 
   const payload = { user: user.toPublicProfile(), token };
   if (refreshTokenPersisted) payload.refreshToken = refreshToken;
@@ -78,6 +90,18 @@ const login = asyncHandler(async (req, res) => {
     await RefreshToken.create({
       token: hashToken(refreshToken),
       userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    refreshTokenPersisted = false;
+    logger.warn(`[login] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
+
+  logger.info(`User logged in: ${user.email}`);
 
   // Support post-login redirect for deep-link flows (e.g. login → return to
   // the page the user was trying to reach). The frontend should navigate to

@@ -46,7 +46,7 @@ router.put('/:id/avatar', authenticate, ...mongoIdParam, (req, res, next) => {
   }
   return next();
 }, uploadAvatar, updateAvatar);
-router.put('/:id/password', authenticate, ...changePasswordRules, validate, changePassword);
+router.patch('/:id/password', authenticate, ...changePasswordRules, validate, changePassword);
 router.post('/:id/follow', authenticate, ...mongoIdParam, followUser);
 router.post('/:id/unfollow', authenticate, ...mongoIdParam, unfollowUser);
 router.post('/:id/block', authenticate, ...mongoIdParam, blockUser);
