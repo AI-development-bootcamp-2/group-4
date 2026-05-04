@@ -173,10 +173,17 @@ const blockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  await User.findByIdAndUpdate(currentUserId, {
-    $addToSet: { blockedUsers: targetId },
-    $pull: { following: targetId, followers: targetId },
-  });
+  // Update both sides of the relationship so follower/following counts
+  // stay consistent after a block.
+  await Promise.all([
+    User.findByIdAndUpdate(currentUserId, {
+      $addToSet: { blockedUsers: targetId },
+      $pull: { following: targetId, followers: targetId },
+    }),
+    User.findByIdAndUpdate(targetId, {
+      $pull: { following: currentUserId, followers: currentUserId },
+    }),
+  ]);
 
   return sendSuccess(res, null, 'User blocked');
 });

@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { verifyToken } = require('../lib/jwt');
 const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
 
@@ -34,11 +35,13 @@ function decodeToken(token) {
 
 /**
  * Verify and decode an access token.
+ * Delegates to lib/jwt so both auth middleware and controllers
+ * share a single verification contract.
  * @param {string} token
  * @returns {object}
  */
 function verifyAccessToken(token) {
-  return jwt.verify(token, config.jwt.secret);
+  return verifyToken(token, 'access');
 }
 
 /**
@@ -47,7 +50,7 @@ function verifyAccessToken(token) {
  * @returns {object}
  */
 function verifyRefreshToken(token) {
-  return jwt.verify(token, config.jwt.refreshSecret);
+  return verifyToken(token, 'refresh');
 }
 
 /**

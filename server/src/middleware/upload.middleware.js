@@ -3,10 +3,16 @@
 const multer = require('multer');
 const path   = require('path');
 const crypto = require('crypto');
+const fs     = require('fs');
 const { config } = require('../config/env');
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const MAX_BYTES = (config.upload.maxSizeMb || 5) * 1024 * 1024;
+
+// Ensure the upload directory exists at middleware-load time.
+// This prevents Multer from throwing a hard error on the first upload
+// request in a fresh environment where the directory has not been created.
+fs.mkdirSync(config.upload.dir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination(_req, _file, cb) {
