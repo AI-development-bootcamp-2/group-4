@@ -32,9 +32,16 @@ describe('GET /api/users', () => {
 });
 
 describe('GET /api/users/:id', () => {
-  it('should return 404 for unknown id', async () => {
-    User.findById = jest.fn().mockResolvedValue(null);
+  it('should return 422 for a non-ObjectId param', async () => {
     const res = await request(app).get('/api/users/nonexistentid');
+    expect(res.status).toBe(422);
+  });
+
+  it('should return 404 for a valid ObjectId that does not exist', async () => {
+    User.findById = jest.fn().mockReturnValue({
+      select: jest.fn().mockResolvedValue(null),
+    });
+    const res = await request(app).get('/api/users/507f1f77bcf86cd799439099');
     expect(res.status).toBe(404);
   });
 });

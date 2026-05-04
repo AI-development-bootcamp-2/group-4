@@ -10,6 +10,9 @@ const logger = require('../utils/logger');
 const asyncHandler = require('../utils/asyncHandler');
 const emailService = require('../services/email.service');
 
+/** Hash a token for safe storage — only the hash is persisted, raw value travels only in transit. */
+const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+
 /**
  * POST /api/auth/register
  */
@@ -38,20 +41,8 @@ const register = asyncHandler(async (req, res) => {
   let refreshTokenPersisted = true;
   try {
     await RefreshToken.create({
-      token: refreshToken,
+      token: hashToken(refreshToken),
       userId: user._id,
-      deviceInfo: {
-        userAgent: req.headers['user-agent'] || '',
-        ip: req.ip || '',
-      },
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    });
-  } catch (tokenErr) {
-    refreshTokenPersisted = false;
-    logger.warn(`[register] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
-  }
-
-  logger.info(`New user registered: ${user.email}`);
 
   const payload = { user: user.toPublicProfile(), token };
   if (refreshTokenPersisted) payload.refreshToken = refreshToken;
@@ -85,20 +76,8 @@ const login = asyncHandler(async (req, res) => {
   let refreshTokenPersisted = true;
   try {
     await RefreshToken.create({
-      token: refreshToken,
+      token: hashToken(refreshToken),
       userId: user._id,
-      deviceInfo: {
-        userAgent: req.headers['user-agent'] || '',
-        ip: req.ip || '',
-      },
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    });
-  } catch (tokenErr) {
-    refreshTokenPersisted = false;
-    logger.warn(`[login] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
-  }
-
-  logger.info(`User logged in: ${user.email}`);
 
   // Support post-login redirect for deep-link flows (e.g. login → return to
   // the page the user was trying to reach). The frontend should navigate to
@@ -130,7 +109,7 @@ const logout = asyncHandler(async (req, res) => {
   if (token) {
     // Scope the revocation to the authenticated user's own tokens so a caller
     // cannot revoke another user's session by submitting a foreign refresh token.
-    const filter = { token, isRevoked: false };
+    const filter = { token: hashToken(token), isRevoked: false };
     if (req.user) filter.userId = req.user.id;
     await RefreshToken.findOneAndUpdate(filter, { isRevoked: true });
   }
@@ -191,6 +170,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   user.passwordResetExpiresAt = null;
   await user.save();
 
+  // Invalidate all active sessions — an attacker with a stolen refresh token
+  // must not be able to keep accessing the account after a password reset.
+  await RefreshToken.updateMany({ userId: user._id, isRevoked: false }, { isRevoked: true });
+
   return sendSuccess(res, null, 'Password reset successfully.');
 });
 
@@ -211,7 +194,7 @@ const refreshToken = asyncHandler(async (req, res) => {
   if (!payload) return sendError(res, 'Invalid refresh token', 401);
 
   // Check that the token exists in the DB and has not been revoked.
-  const storedToken = await RefreshToken.findOne({ token, isRevoked: false });
+  const storedToken = await RefreshToken.findOne({ token: hashToken(token), isRevoked: false });
   if (!storedToken) return sendError(res, 'Refresh token revoked or not found', 401);
 
   // Confirm the owning user still exists — a deleted account must not be
@@ -232,7 +215,7 @@ const refreshToken = asyncHandler(async (req, res) => {
   let rotationOk = false;
   try {
     await RefreshToken.create({
-      token: newRefreshToken,
+      token: hashToken(newRefreshToken),
       userId: user._id,
       deviceInfo: storedToken.deviceInfo,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

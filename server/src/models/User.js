@@ -121,6 +121,10 @@ userSchema.methods.toPublicProfile = function () {
   delete obj.passwordResetToken;
   delete obj.passwordResetExpiresAt;
   delete obj.emailVerifyToken;
+  // These fields are internal/sensitive and should never appear in any response
+  delete obj.blockedUsers;
+  delete obj.preferences;
+  delete obj.isEmailVerified;
   return obj;
 };
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
 const { sendSuccess, sendError, sendPaginated } = require('../utils/response');
 const { parsePagination, buildPaginationMeta } = require('../utils/paginate');
 const asyncHandler = require('../utils/asyncHandler');
@@ -142,6 +143,10 @@ const changePassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
   await user.save();
+
+  // Invalidate all active sessions so a password change immediately ends
+  // any sessions an attacker may have obtained via a stolen refresh token.
+  await RefreshToken.updateMany({ userId: user._id, isRevoked: false }, { isRevoked: true });
 
   return sendSuccess(res, null, 'Password changed successfully');
 });

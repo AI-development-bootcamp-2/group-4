@@ -13,6 +13,12 @@ const logger = require('../utils/logger');
  */
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
+  // Map Multer-specific error codes to proper client-error status codes.
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    err.statusCode = 400;
+    err.message = 'File exceeds maximum allowed size';
+  }
+
   const statusCode = err.statusCode || err.status || 500;
 
   logger.error(`[${req.method}] ${req.originalUrl} → ${err.message}`, {

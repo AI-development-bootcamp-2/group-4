@@ -31,7 +31,9 @@ function fileFilter(_req, file, cb) {
   if (ALLOWED_MIME.has(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`File type not allowed: ${file.mimetype}`), false);
+    const err = new Error(`File type not allowed: ${file.mimetype}`);
+    err.statusCode = 400;
+    cb(err, false);
   }
 }
 
