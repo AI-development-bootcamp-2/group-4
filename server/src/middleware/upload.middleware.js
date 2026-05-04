@@ -1,35 +1,37 @@
 'use strict';
 
 const multer = require('multer');
-const path = require('path');
+const path   = require('path');
+const crypto = require('crypto');
 const { config } = require('../config/env');
 
-/**
- * Multer storage configuration.
- * Files land in the configured upload directory, preserving their original name
- * to make retrieval straightforward for the client.
- */
+const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const MAX_BYTES = (config.upload.maxSizeMb || 5) * 1024 * 1024;
+
 const storage = multer.diskStorage({
   destination(_req, _file, cb) {
     cb(null, config.upload.dir);
   },
   filename(_req, file, cb) {
-    // Preserve original filename so the client can reference it by name
-    cb(null, file.originalname);
+    // Use a random hex prefix + sanitised extension to prevent filename collisions
+    // and path-traversal via crafted originalnames.
+    const ext  = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, '');
+    const safe = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`;
+    cb(null, safe);
   },
 });
 
-const upload = multer({ storage });
+function fileFilter(_req, file, cb) {
+  if (ALLOWED_MIME.has(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`File type not allowed: ${file.mimetype}`), false);
+  }
+}
 
-/**
- * Single-file upload middleware for profile pictures.
- * Field name: "avatar"
- */
-const uploadAvatar = upload.single('avatar');
+const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_BYTES } });
 
-/**
- * Multi-file upload middleware (up to 5 attachments).
- */
+const uploadAvatar      = upload.single('avatar');
 const uploadAttachments = upload.array('attachments', 5);
 
 module.exports = { uploadAvatar, uploadAttachments };

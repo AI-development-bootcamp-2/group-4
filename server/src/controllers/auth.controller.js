@@ -17,7 +17,7 @@ const register = asyncHandler(async (req, res) => {
   await user.save();
 
   const token = generateAccessToken({ id: user._id, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user._id });
+  const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
   logger.info(`New user registered: ${user.email}`);
 
@@ -47,7 +47,7 @@ const login = asyncHandler(async (req, res) => {
   await user.save();
 
   const token = generateAccessToken({ id: user._id, role: user.role });
-  const refreshToken = generateRefreshToken({ id: user._id });
+  const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
   logger.info(`User logged in: ${user.email}`);
 

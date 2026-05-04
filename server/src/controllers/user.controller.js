@@ -17,15 +17,14 @@ const getUsers = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (search) {
-    // Search by username or email — partial match
-    filter.$or = [
-      { username: new RegExp(search) },
-      { email: new RegExp(search) },
-    ];
+    // Search by username only on the public listing — email search is not exposed
+    filter.username = new RegExp(search);
   }
 
   const [users, total] = await Promise.all([
-    User.find(filter).select('-password -passwordResetToken -passwordResetExpiresAt -emailVerifyToken').skip(skip).limit(limit).sort({ createdAt: -1 }),
+    User.find(filter)
+      .select('username avatar bio onlineStatus createdAt postCount')
+      .skip(skip).limit(limit).sort({ createdAt: -1 }),
     User.countDocuments(filter),
   ]);
 
@@ -135,18 +134,14 @@ const followUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  const [currentUser, targetUser] = await Promise.all([
-    User.findById(currentUserId),
-    User.findById(targetId),
-  ]);
-
+  const targetUser = await User.findById(targetId);
   if (!targetUser) return sendError(res, 'User not found', 404);
 
-  // Add to following / followers lists
-  currentUser.following.push(targetId);
-  targetUser.followers.push(currentUserId);
-
-  await Promise.all([currentUser.save(), targetUser.save()]);
+  // Add to following / followers lists — use $addToSet to prevent duplicates
+  await Promise.all([
+    User.findByIdAndUpdate(currentUserId, { $addToSet: { following: targetId } }),
+    User.findByIdAndUpdate(targetId,      { $addToSet: { followers: currentUserId } }),
+  ]);
 
   return sendSuccess(res, null, 'Followed successfully');
 });
@@ -222,6 +217,9 @@ const patchPreferences = asyncHandler(async (req, res) => {
  * Update online status.
  */
 const updateOnlineStatus = asyncHandler(async (req, res) => {
+  if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+    return sendError(res, 'Forbidden', 403);
+  }
   const { status } = req.body;
   const user = await User.findByIdAndUpdate(
     req.params.id,
