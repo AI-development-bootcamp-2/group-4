@@ -158,6 +158,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
+  const targetUser = await User.findById(targetId);
+  if (!targetUser) return sendError(res, 'User not found', 404);
+
   await Promise.all([
     User.findByIdAndUpdate(currentUserId, { $pull: { following: targetId } }),
     User.findByIdAndUpdate(targetId, { $pull: { followers: currentUserId } }),
@@ -172,6 +175,9 @@ const unfollowUser = asyncHandler(async (req, res) => {
 const blockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
+
+  const targetUser = await User.findById(targetId);
+  if (!targetUser) return sendError(res, 'User not found', 404);
 
   // Update both sides of the relationship so follower/following counts
   // stay consistent after a block.
@@ -194,6 +200,9 @@ const blockUser = asyncHandler(async (req, res) => {
 const unblockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
+
+  const targetUser = await User.findById(targetId);
+  if (!targetUser) return sendError(res, 'User not found', 404);
 
   await User.findByIdAndUpdate(currentUserId, {
     $pull: { blockedUsers: targetId },
