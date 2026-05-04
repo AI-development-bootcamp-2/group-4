@@ -15,6 +15,28 @@ An internet forum built with React + Node.js + Express + MongoDB.
 
 ---
 
+## Backend Setup
+
+1. `cd group-4/server`
+2. `npm install`
+3. Create `.env` from `.env.example`
+4. `npm run dev`
+
+The example environment runs in mock mode by default:
+
+```env
+PORT=5001
+USE_MOCK_DB=true
+MONGO_URI=
+JWT_SECRET=dev-secret
+```
+
+With `USE_MOCK_DB=true`, the server skips MongoDB and uses in-memory mock data for local testing. Public routes like `GET /api/health`, `GET /api/posts`, and `GET /api/categories` work without a database. For protected routes in mock mode, send `Authorization: Bearer mock-token`.
+
+To use a real MongoDB connection later, set `USE_MOCK_DB=false` and provide a real `MONGO_URI`.
+
+---
+
 ## Folder Structure
 
 ```
