@@ -2,7 +2,7 @@
 
 const { Router } = require('express');
 const { register, login, logout, forgotPassword, resetPassword, refreshToken } = require('../controllers/auth.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth.middleware');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate.middleware');
 const { resetPasswordRules, refreshTokenRules } = require('../validators/auth.validator');
@@ -23,7 +23,7 @@ const loginValidation = [
 
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
-router.post('/logout', authenticate, logout);
+router.post('/logout', optionalAuthenticate, logout);
 router.post('/forgot-password', body('email').isEmail(), validate, forgotPassword);
 router.post('/reset-password', resetPasswordRules, validate, resetPassword);
 router.post('/refresh', refreshTokenRules, validate, refreshToken);

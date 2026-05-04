@@ -189,6 +189,10 @@ const blockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
+  if (String(targetId) === String(currentUserId)) {
+    return sendError(res, 'You cannot block yourself', 400);
+  }
+
   const [currentUser, targetUser] = await Promise.all([
     User.findById(currentUserId),
     User.findById(targetId),

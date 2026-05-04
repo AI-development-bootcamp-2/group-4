@@ -32,6 +32,9 @@ const register = asyncHandler(async (req, res) => {
   // Persist refresh token so it can be revoked on logout or compromise.
   // Wrapped in try/catch: if this write fails the account was still created
   // successfully and the caller gets 201. On next login a new token is issued.
+  // The refreshToken is omitted from the response when it was not persisted
+  // to avoid giving the client a token that will always fail at /auth/refresh.
+  let refreshTokenPersisted = true;
   try {
     await RefreshToken.create({
       token: refreshToken,
@@ -43,12 +46,15 @@ const register = asyncHandler(async (req, res) => {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
   } catch (tokenErr) {
+    refreshTokenPersisted = false;
     logger.warn(`[register] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
   }
 
   logger.info(`New user registered: ${user.email}`);
 
-  return sendSuccess(res, { user: user.toPublicProfile(), token, refreshToken }, 'Registration successful', 201);
+  const payload = { user: user.toPublicProfile(), token };
+  if (refreshTokenPersisted) payload.refreshToken = refreshToken;
+  return sendSuccess(res, payload, 'Registration successful', 201);
 });
 
 /**
@@ -73,9 +79,9 @@ const login = asyncHandler(async (req, res) => {
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
   // Persist refresh token for revocation support.
-  // Wrapped in try/catch: if this write fails the login is still successful
-  // (user state has already been updated); a degraded session with only an
-  // access token is returned rather than a 500.
+  // The refreshToken is omitted from the response when it was not persisted
+  // to avoid giving the client a token that will always fail at /auth/refresh.
+  let refreshTokenPersisted = true;
   try {
     await RefreshToken.create({
       token: refreshToken,
@@ -87,6 +93,7 @@ const login = asyncHandler(async (req, res) => {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
   } catch (tokenErr) {
+    refreshTokenPersisted = false;
     logger.warn(`[login] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
   }
 
@@ -109,7 +116,9 @@ const login = asyncHandler(async (req, res) => {
                    : isSafeRedirect(req.body.next)   ? req.body.next
                    : '/';
 
-  return sendSuccess(res, { user: user.toPublicProfile(), token, refreshToken, redirectTo }, 'Login successful');
+  const payload = { user: user.toPublicProfile(), token, redirectTo };
+  if (refreshTokenPersisted) payload.refreshToken = refreshToken;
+  return sendSuccess(res, payload, 'Login successful');
 });
 
 /**
