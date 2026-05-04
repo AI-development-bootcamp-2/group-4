@@ -11,7 +11,15 @@ describe('notification.service', () => {
   describe('getNotifications()', () => {
     it('returns paginated notifications for a user', async () => {
       const docs = [{ _id: 'n1', recipient: userId, isRead: false }];
-      Notification.find   = jest.fn().mockReturnValue({ sort: () => ({ skip: () => ({ limit: () => ({ lean: () => Promise.resolve(docs) }) }) }) });
+      Notification.find = jest.fn().mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              populate: jest.fn().mockResolvedValue(docs),
+            }),
+          }),
+        }),
+      });
       Notification.countDocuments = jest.fn().mockResolvedValue(1);
 
       const result = await notificationService.getNotifications(userId, { page: 1, limit: 10 });
@@ -29,9 +37,9 @@ describe('notification.service', () => {
 
   describe('getUnreadCount()', () => {
     it('returns numeric count', async () => {
-      Notification.countDocuments = jest.fn().mockResolvedValue(5);
-      const count = await notificationService.getUnreadCount(userId);
-      expect(typeof count).toBe('number');
+      Notification.unreadCount = jest.fn().mockResolvedValue(5);
+      const result = await notificationService.getUnreadCount(userId);
+      expect(result).toEqual({ count: 5 });
     });
   });
 });

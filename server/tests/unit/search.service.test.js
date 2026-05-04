@@ -6,13 +6,13 @@ const searchEngine  = require('../../src/lib/searchEngine');
 jest.mock('../../src/lib/searchEngine');
 
 describe('search.service', () => {
-  describe('search()', () => {
+  describe('globalSearch()', () => {
     it('returns combined results', async () => {
-      searchEngine.searchUsers    = jest.fn().mockResolvedValue([]);
-      searchEngine.searchPosts    = jest.fn().mockResolvedValue([]);
-      searchEngine.searchComments = jest.fn().mockResolvedValue([]);
+      searchEngine.searchCollections = jest.fn().mockResolvedValue({
+        users: [], posts: [], comments: [],
+      });
 
-      const result = await searchService.search({ term: 'hello', type: 'all', limit: 5 });
+      const result = await searchService.globalSearch({ q: 'hello', type: 'all' });
 
       expect(result).toHaveProperty('users');
       expect(result).toHaveProperty('posts');
@@ -21,9 +21,11 @@ describe('search.service', () => {
     });
 
     it('returns only users when type=users', async () => {
-      searchEngine.searchUsers = jest.fn().mockResolvedValue([{ username: 'alice' }]);
+      searchEngine.searchCollections = jest.fn().mockResolvedValue({
+        users: [{ username: 'alice' }], posts: [], comments: [],
+      });
 
-      const result = await searchService.search({ term: 'ali', type: 'users', limit: 5 });
+      const result = await searchService.globalSearch({ q: 'ali', type: 'users' });
 
       expect(result.users).toHaveLength(1);
       expect(result.posts).toHaveLength(0);

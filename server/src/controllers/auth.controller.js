@@ -6,6 +6,7 @@ const { sendSuccess, sendError } = require('../utils/response');
 const { hoursFromNow } = require('../helpers/date.helper');
 const logger = require('../utils/logger');
 const asyncHandler = require('../utils/asyncHandler');
+const emailService = require('../services/email.service');
 
 /**
  * POST /api/auth/register
@@ -98,7 +99,13 @@ const forgotPassword = asyncHandler(async (req, res) => {
 
   logger.info(`Password reset requested for: ${email}`);
 
-  // TODO: send token via email (emailService.sendPasswordReset(user.email, resetToken))
+  try {
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
+  } catch (err) {
+    logger.error(`Failed to send password reset email to ${email}: ${err.message}`);
+    // Still return success — do not reveal whether email delivery failed
+  }
+
   logger.debug('[dev-only] password reset token generated (check email delivery)');
 
   return sendSuccess(res, null, 'If that email exists, a reset link has been sent.');
