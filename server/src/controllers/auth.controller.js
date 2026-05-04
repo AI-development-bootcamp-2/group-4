@@ -115,13 +115,20 @@ const login = asyncHandler(async (req, res) => {
   // the page the user was trying to reach). The frontend should navigate to
   // this URL after storing tokens. Defaults to '/' if not provided.
   //
-  // Security: only relative paths are accepted; absolute URLs and protocol-
-  // relative forms (//host) are blocked to prevent open-redirect to external
-  // hosts. isSafeRedirect() rejects anything that carries a scheme.
+  // Security: only same-origin relative paths are accepted.
+  // isSafeRedirect() enforces three independent guards:
+  //   1. Must be a string starting with /
+  //   2. Must not carry an explicit URI scheme (RFC 3986 §3.1)
+  //   3. Must not contain null bytes or header-injection characters
   const isSafeRedirect = (u) => {
-    if (typeof u !== 'string' || !u.startsWith('/')) return false;
-    // Reject URIs that embed an explicit scheme such as http://, ftp://, etc.
-    if (/[a-z][a-z0-9+\-.]*:\/\//i.test(u)) return false;
+    if (typeof u !== 'string') return false;
+    // Guard 3 first — null bytes / CR / LF could truncate a Location header
+    if (/[\x00\r\n]/.test(u)) return false;
+    // Guard 2 — reject any URI carrying an explicit scheme: http://, ftp://, javascript:, etc.
+    // Uses RFC 3986 §3.1 character class (ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":")
+    if (/^[a-z][a-z0-9+\-.]*:/i.test(u)) return false;
+    // Guard 1 — must be a relative path
+    if (!u.startsWith('/')) return false;
     return true;
   };
   const redirectTo = isSafeRedirect(req.query.next) ? req.query.next
