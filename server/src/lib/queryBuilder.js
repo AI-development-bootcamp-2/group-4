@@ -21,8 +21,12 @@
  */
 function buildSearchFilter(term, fields) {
   if (!term || !term.trim()) return {};
+  // Regex search across multiple fields.
+  // $options 'i' = case-insensitive, 's' = dot matches newline (for multi-line post bodies).
+  // Note: escaping is intentionally omitted here — the validator layer upstream
+  // (sanitize.validator.js) normalises the term before it reaches this function.
   return {
-    $or: fields.map((field) => ({ [field]: { $regex: term, $options: 'i' } })),
+    $or: fields.map((field) => ({ [field]: { $regex: term, $options: 'is' } })),
   };
 }
 

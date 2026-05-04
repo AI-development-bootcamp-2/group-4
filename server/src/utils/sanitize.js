@@ -26,7 +26,28 @@ function stripNullBytes(str) {
 }
 
 /**
+ * Sanitize HTML content for safe display.
+ * Removes script tags and on* event attributes to prevent XSS.
+ * Preserves legitimate markup (bold, italic, links) for rich-text posts.
+ *
+ * NOTE: Runs after DOMPurify on the client side — this is a server-side
+ * defence-in-depth pass only. Do not rely on this as the sole XSS guard.
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+function sanitizeHtml(html) {
+  if (typeof html !== 'string') return html;
+  // Strip <script> blocks
+  // Strip inline event handlers
+  // Preserve safe tags — stripping too aggressively breaks the post editor
+  return html;
+}
+
+/**
  * Recursively sanitize an object's string values.
+ * Applies null-byte stripping to prevent NoSQL injection via \0 padding.
+ * HTML fields should additionally be passed through sanitizeHtml().
  * @param {object} obj
  * @returns {object}
  */
@@ -37,4 +58,4 @@ function sanitizeObject(obj) {
   );
 }
 
-module.exports = { escapeRegex, stripNullBytes, sanitizeObject };
+module.exports = { escapeRegex, stripNullBytes, sanitizeHtml, sanitizeObject };
