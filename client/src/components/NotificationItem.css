@@ -1,0 +1,38 @@
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.15s;
+}
+
+.notif-item:hover { background: var(--color-bg-secondary); }
+.notif-item--unread { background: rgba(59,130,246,0.06); }
+
+.notif-item__icon { font-size: 1rem; min-width: 1.2rem; }
+
+.notif-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  font-size: 0.88rem;
+}
+
+.notif-item__date { font-size: 0.78rem; color: var(--color-text-muted); }
+
+.notif-item__delete {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.notif-item:hover .notif-item__delete { opacity: 1; }

@@ -22,7 +22,7 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 6 — User Profile Page**
   Build `ProfileHeader.jsx` with follow/unfollow button, reusable `PostList.jsx`, `ProfilePage.jsx` with inline edit form for own profile.
 
-- [ ] **Task 7 — Notifications**
+- [x] **Task 7 — Notifications**
   Build `NotificationItem.jsx`, `NotificationList.jsx`, wire `NotificationBell.jsx` into Navbar with 30s polling, mark-as-read on click, delete per notification.
 
 - [ ] **Task 8 — Private Messages**
