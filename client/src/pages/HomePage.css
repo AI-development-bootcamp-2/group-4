@@ -1,0 +1,27 @@
+.home {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.home__feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home__infinite {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home__sentinel { height: 1px; }
+
+.home__end {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: 1rem 0;
+}
