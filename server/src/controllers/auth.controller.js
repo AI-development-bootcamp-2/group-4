@@ -1,6 +1,7 @@
 'use strict';
 
 const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
 const { generateAccessToken, generateRefreshToken, generateResetToken } = require('../utils/token');
 const { sendSuccess, sendError } = require('../utils/response');
 const { hoursFromNow } = require('../helpers/date.helper');
@@ -28,6 +29,17 @@ const register = asyncHandler(async (req, res) => {
   const token = generateAccessToken({ id: user._id, role: user.role });
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
+  // Persist refresh token so it can be revoked on logout or compromise.
+  await RefreshToken.create({
+    token: refreshToken,
+    userId: user._id,
+    deviceInfo: {
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip || '',
+    },
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
+
   logger.info(`New user registered: ${user.email}`);
 
   return sendSuccess(res, { user: user.toPublicProfile(), token, refreshToken }, 'Registration successful', 201);
@@ -53,6 +65,17 @@ const login = asyncHandler(async (req, res) => {
 
   const token = generateAccessToken({ id: user._id, role: user.role });
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
+
+  // Persist refresh token for revocation support.
+  await RefreshToken.create({
+    token: refreshToken,
+    userId: user._id,
+    deviceInfo: {
+      userAgent: req.headers['user-agent'] || '',
+      ip: req.ip || '',
+    },
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  });
 
   logger.info(`User logged in: ${user.email}`);
 
@@ -80,6 +103,13 @@ const login = asyncHandler(async (req, res) => {
  * POST /api/auth/logout
  */
 const logout = asyncHandler(async (req, res) => {
+  const { refreshToken: token } = req.body;
+  if (token) {
+    await RefreshToken.findOneAndUpdate(
+      { token, isRevoked: false },
+      { isRevoked: true }
+    );
+  }
   if (req.user) {
     await User.findByIdAndUpdate(req.user.id, { onlineStatus: 'offline', lastSeenAt: new Date() });
   }
@@ -151,6 +181,14 @@ const refreshToken = asyncHandler(async (req, res) => {
     return sendError(res, 'Invalid refresh token', 401);
   }
   if (!payload) return sendError(res, 'Invalid refresh token', 401);
+
+  // Check that the token exists in the DB and has not been revoked.
+  const storedToken = await RefreshToken.findOne({ token, isRevoked: false });
+  if (!storedToken) return sendError(res, 'Refresh token revoked or not found', 401);
+
+  // Update last-used timestamp.
+  storedToken.lastUsedAt = new Date();
+  await storedToken.save();
 
   const newAccessToken = generateAccessToken({ id: payload.id, role: payload.role });
   return sendSuccess(res, { token: newAccessToken }, 'Token refreshed');
