@@ -13,6 +13,14 @@ const asyncHandler = require('../utils/asyncHandler');
 const register = asyncHandler(async (req, res) => {
   // Whitelist allowed fields — prevents mass-assignment of role, verified status, etc.
   const { username, email, password } = req.body;
+
+  // Check for duplicate email/username before attempting to save
+  const existing = await User.findOne({ $or: [{ email }, { username }] });
+  if (existing) {
+    const field = existing.email === email ? 'email' : 'username';
+    return sendError(res, `${field} already in use`, 409);
+  }
+
   const user = new User({ username, email, password });
   await user.save();
 

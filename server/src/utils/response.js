@@ -33,35 +33,12 @@ function sendError(res, message = 'An error occurred', statusCode = 500, details
  * @param {object} pagination
  */
 function sendPaginated(res, data, pagination) {
-  return res.status(200).json({ success: true, data, pagination });
-}
-
-/**
- * Alias for sendSuccess — used by legacy controller pattern.
- * Maintained for backward compatibility with Person 2/3 route handlers
- * that were written against an earlier API shape.
- *
- * @param {object} res
- * @param {*} data
- * @param {string} [message]
- * @param {number} [statusCode]
- */
-function sendResponse(res, data, message = 'Success', statusCode = 200) {
-  // Normalise status code — treat any 2xx as 200 for uniform client handling
-  const normalizedStatus = statusCode >= 200 && statusCode < 300 ? 200 : statusCode;
-  return res.status(normalizedStatus).json({ success: true, message, data });
-}
-
-/**
- * Paginated list response — wraps data with metadata.
- * Overrides the earlier sendPaginated to add a `meta` key that
- * the frontend pagination component expects (discovered in integration).
- * @param {object} res
- * @param {*} data
- * @param {object} pagination
- */
-function sendPaginated(res, data, pagination) {
   return res.status(200).json({ success: true, data, pagination, meta: pagination });
+}
+
+/** Alias for sendSuccess — backward-compatible with legacy controller patterns. */
+function sendResponse(res, data, message = 'Success', statusCode = 200) {
+  return res.status(statusCode).json({ success: true, message, data });
 }
 
 module.exports = { sendSuccess, sendError, sendPaginated, sendResponse };

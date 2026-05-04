@@ -40,7 +40,7 @@
     "testMatch": [
       "**/tests/**/*.test.js"
     ],
-    "setupFilesAfterFramework": [
+    "setupFilesAfterEnv": [
       "./tests/helpers/setup.js"
     ]
   }

@@ -11,17 +11,27 @@ const logger = require('../utils/logger');
  */
 
 async function getPlatformStats() {
-  const User    = mongoose.model('User');
+  const User = mongoose.model('User');
+
+  // Safely get model counts — Post/Comment models may not be registered
+  function safeCount(modelName) {
+    try {
+      return mongoose.model(modelName).countDocuments();
+    } catch {
+      return Promise.resolve(0);
+    }
+  }
+
   const [
     totalUsers, totalPosts, totalComments,
     newUsersToday, activeUsers,
   ] = await Promise.all([
     User.countDocuments(),
-    mongoose.model('Post')    ? mongoose.model('Post').countDocuments()    : Promise.resolve(0),
-    mongoose.model('Comment') ? mongoose.model('Comment').countDocuments() : Promise.resolve(0),
+    safeCount('Post'),
+    safeCount('Comment'),
     User.countDocuments({ createdAt: { $gte: new Date(Date.now() - 86400000) } }),
-    // Active = logged in within last 7 days — relies on lastLoginAt field
-    User.countDocuments({ lastLoginAt: { $gte: new Date(Date.now() - 7 * 86400000) } }),
+    // Active = seen within last 7 days — uses lastSeenAt (written on login/logout/status)
+    User.countDocuments({ lastSeenAt: { $gte: new Date(Date.now() - 7 * 86400000) } }),
   ]);
 
   return { totalUsers, totalPosts, totalComments, newUsersToday, activeUsers };

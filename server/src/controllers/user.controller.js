@@ -17,8 +17,9 @@ const getUsers = asyncHandler(async (req, res) => {
 
   const filter = {};
   if (search) {
-    // Search by username only on the public listing — email search is not exposed
-    filter.username = new RegExp(search);
+    // Escape regex metacharacters to prevent malformed-pattern throws and ReDoS
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.username = new RegExp(escaped, 'i');
   }
 
   const [users, total] = await Promise.all([
