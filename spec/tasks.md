@@ -13,7 +13,7 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 3 — Home Page (Feed)**
   Build `PostCard.jsx`, `SortBar.jsx`, `Pagination.jsx`, `HomePage.jsx` with feed fetching, sort toggle, and infinite scroll via `IntersectionObserver`.
 
-- [ ] **Task 4 — Post Page**
+- [x] **Task 4 — Post Page**
   Build `PostContent.jsx` (react-markdown), `LikeButton.jsx` with optimistic update, `CommentForm.jsx`, recursive `CommentList.jsx` for nested comments, `PostPage.jsx` with edit/delete buttons for post author.
 
 - [ ] **Task 5 — Create / Edit Post**

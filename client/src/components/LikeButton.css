@@ -1,0 +1,13 @@
+.like-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--color-text-muted);
+  transition: all 0.15s;
+}
+
+.like-btn:hover { border-color: var(--color-danger); color: var(--color-danger); }
+.like-btn--liked { border-color: var(--color-danger); color: var(--color-danger); background: rgba(239,68,68,0.08); }
