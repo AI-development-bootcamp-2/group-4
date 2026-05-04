@@ -8,7 +8,10 @@ jest.mock('../../src/lib/searchEngine');
 describe('search.service', () => {
   describe('globalSearch()', () => {
     it('returns combined results', async () => {
-      searchEngine.searchCollections = jest.fn().mockResolvedValue({
+      // .mockResolvedValue mutates the already-captured auto-mock reference;
+      // reassigning searchEngine.searchCollections = jest.fn() would create a new
+      // function that the service's closed-over const never sees.
+      searchEngine.searchCollections.mockResolvedValue({
         users: [], posts: [], comments: [],
       });
 
@@ -21,7 +24,7 @@ describe('search.service', () => {
     });
 
     it('returns only users when type=users', async () => {
-      searchEngine.searchCollections = jest.fn().mockResolvedValue({
+      searchEngine.searchCollections.mockResolvedValue({
         users: [{ username: 'alice' }], posts: [], comments: [],
       });
 

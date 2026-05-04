@@ -1,9 +1,12 @@
 'use strict';
 
 const notificationService = require('../../src/services/notification.service');
-const Notification        = require('../../src/models/Notification');
+const NotificationModule  = require('../../src/models/Notification');
 
 jest.mock('../../src/models/Notification');
+
+// The service imports { Notification } from the module — reference the same shape.
+const { Notification } = NotificationModule;
 
 describe('notification.service', () => {
   const userId = 'user-111';

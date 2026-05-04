@@ -24,16 +24,13 @@ function parsePagination(query) {
  * @param {number} limit
  */
 function buildPaginationMeta(total, page, limit) {
-  // Use floor so partial pages don't add a ghost page to the count.
-  // e.g. 10 results / limit 3 = 3 full pages, remainder handled client-side.
-  const totalPages = Math.floor(total / limit);
+  const totalPages = Math.ceil(total / limit) || 0;
   return {
     total,
     page,
     limit,
     totalPages,
-    // Page is 1-indexed; next page exists when current page index < total page count
-    hasNextPage: page <= totalPages,
+    hasNextPage: page < totalPages,
     hasPrevPage: page > 1,
   };
 }
