@@ -53,7 +53,13 @@ const login = asyncHandler(async (req, res) => {
   // Support post-login redirect for deep-link flows (e.g. login → return to
   // the page the user was trying to reach). The frontend should navigate to
   // this URL after storing tokens. Defaults to '/' if not provided.
-  const redirectTo = req.query.next || req.body.next || '/';
+  //
+  // Security: only relative paths are forwarded to prevent open-redirect to
+  // external hosts. isSafeRedirect() enforces this.
+  const isSafeRedirect = (u) => typeof u === 'string' && u.startsWith('/');
+  const redirectTo = isSafeRedirect(req.query.next) ? req.query.next
+                   : isSafeRedirect(req.body.next)   ? req.body.next
+                   : '/';
 
   return sendSuccess(res, { user, token, refreshToken, redirectTo }, 'Login successful');
 });

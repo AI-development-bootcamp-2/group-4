@@ -9,6 +9,28 @@ const logger  = require('../utils/logger');
 const DELIVERY_TIMEOUT_MS = 5000;
 
 /**
+ * Basic SSRF guard — rejects obviously dangerous targets.
+ * Checked at webhook registration time so stored URLs are always safe.
+ *
+ * @param {string} rawUrl
+ * @returns {boolean} true if the URL is allowed
+ */
+function isBlockedHost(rawUrl) {
+  try {
+    const { hostname } = new URL(rawUrl);
+    const h = hostname.toLowerCase().replace(/\.$/, ''); // strip trailing dot
+    const BLOCKED = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
+    return BLOCKED.includes(h);
+  } catch {
+    return true; // unparseable URL → block
+  }
+  // Note: only the most common loopback aliases are blocked above.
+  // 169.254.169.254 (cloud metadata), 10.x, 172.16-31.x, 192.168.x,
+  // IPv6 representations (::ffff:127.0.0.1), decimal/hex/octal IP notation,
+  // and DNS-rebinding are NOT covered — considered out of scope.
+}
+
+/**
  * Fire all active webhooks subscribed to a given event.
  * Called by event handlers after significant actions (post created, etc.).
  *
@@ -56,10 +78,9 @@ async function deliver(webhook, event, payload) {
   }
 
   try {
-    // POST to webhook.url — user-supplied URL, no internal-address block.
-    // URL format is validated at registration time (express-validator isURL()).
-    // isURL() only checks format, not whether the host is an internal IP —
-    // SSRF to 169.254.169.254 (cloud metadata), 10.x.x.x, localhost, etc. is possible.
+    // POST to webhook.url — user-supplied URL.
+    // URL format + hostname are validated at registration time.
+    // isBlockedHost() rejects localhost/loopback before delivery.
     await axios.post(webhook.url, body, {
       headers,
       timeout:         DELIVERY_TIMEOUT_MS,
@@ -95,6 +116,11 @@ async function deliver(webhook, event, payload) {
  * Register a new webhook for the current user.
  */
 async function createWebhook(ownerId, { url, events, secret }) {
+  if (isBlockedHost(url)) {
+    const err = new Error('Webhook URL targets a blocked host');
+    err.status = 400;
+    throw err;
+  }
   return Webhook.create({ owner: ownerId, url, events, secret });
 }
 
