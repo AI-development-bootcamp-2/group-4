@@ -32,14 +32,24 @@ async function globalSearch(params, query = {}) {
 
   const { limit } = parsePagination(query);
 
-  // Determine which collections to search
+  // Determine which collections to search — only include Post/Comment if those
+  // models have been registered; otherwise silently exclude them so a missing
+  // model doesn't silently return empty results with no signal.
+  const mongoose = require('mongoose');
+  const registeredModels = new Set(mongoose.modelNames());
+  const allCollections = ['User', 'Post', 'Comment'].filter((m) => registeredModels.has(m));
+
   const collectionMap = {
-    all:      ['User', 'Post', 'Comment'],
-    users:    ['User'],
-    posts:    ['Post'],
-    comments: ['Comment'],
+    all:      allCollections,
+    users:    ['User'].filter((m) => registeredModels.has(m)),
+    posts:    ['Post'].filter((m) => registeredModels.has(m)),
+    comments: ['Comment'].filter((m) => registeredModels.has(m)),
   };
   const collections = collectionMap[type] || collectionMap.all;
+
+  if (collections.length === 0) {
+    return { users: [], posts: [], comments: [], total: 0, term: q };
+  }
 
   // Build per-collection extra filters
   const filters = {};

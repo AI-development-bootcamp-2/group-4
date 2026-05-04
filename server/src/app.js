@@ -16,15 +16,19 @@ const app = express();
 registerSecurityPlugin(app);
 
 // ── Debug tooling (dev only) ──────────────────────────────────
-registerDebugPlugin(app);
+if (process.env.NODE_ENV !== 'production') {
+  registerDebugPlugin(app);
+}
 
 // ── Core middleware ────────────────────────────────────────────
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Static files — serve uploaded assets
-app.use('/uploads', express.static('public/uploads'));
+// Static files — serve uploaded assets from the configured upload directory
+const path = require('path');
+const { config } = require('./config/env');
+app.use('/uploads', express.static(path.resolve(config.upload.dir)));
 
 // HTTP request logging
 app.use(requestLogger);

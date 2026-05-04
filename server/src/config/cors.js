@@ -13,12 +13,14 @@ const allowedOrigins = config.nodeEnv === 'production'
 
 const corsOptions = {
   origin(origin, callback) {
-    // Allow requests with no origin (server-to-server, curl) in non-prod
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    // Allow requests with no origin (server-to-server, curl) in non-prod only.
+    if (!origin && config.nodeEnv !== 'production') {
+      return callback(null, true);
     }
+    if (origin && allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

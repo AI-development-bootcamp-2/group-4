@@ -97,7 +97,12 @@ const updateAvatar = asyncHandler(async (req, res) => {
     { avatar: `/uploads/${req.file.filename}` },
     { new: true }
   );
-  if (!user) return sendError(res, 'User not found', 404);
+  if (!user) {
+    // Target user does not exist — remove the orphaned file before returning.
+    const fs = require('fs');
+    fs.unlink(req.file.path, () => {});
+    return sendError(res, 'User not found', 404);
+  }
 
   return sendSuccess(res, { avatar: user.avatar }, 'Avatar updated');
 });
