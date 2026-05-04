@@ -28,7 +28,15 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const user = new User({ username, email, password });
-  await user.save();
+  try {
+    await user.save();
+  } catch (saveErr) {
+    if (saveErr.code === 11000) {
+      const field = saveErr.message.includes('email') ? 'email' : 'username';
+      return sendError(res, `${field} already in use`, 409);
+    }
+    throw saveErr;
+  }
 
   const token = generateAccessToken({ id: user._id, role: user.role });
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
@@ -217,26 +225,28 @@ const refreshToken = asyncHandler(async (req, res) => {
   }
   if (!payload) return sendError(res, 'Invalid refresh token', 401);
 
-  // Check that the token exists in the DB and has not been revoked.
-  const storedToken = await RefreshToken.findOne({ token: hashToken(token), isRevoked: false });
+  // Atomically revoke the old token in a single DB round-trip. If a concurrent
+  // request already revoked it, findOneAndUpdate returns null and we reject
+  // immediately — this eliminates the TOCTOU race where two parallel requests
+  // could both observe isRevoked:false and each mint a fresh session.
+  const storedToken = await RefreshToken.findOneAndUpdate(
+    { token: hashToken(token), isRevoked: false },
+    { isRevoked: true },
+    { new: true },
+  );
   if (!storedToken) return sendError(res, 'Refresh token revoked or not found', 401);
 
   // Confirm the owning user still exists — a deleted account must not be
   // able to mint new access tokens via a still-valid refresh token.
+  // The old token is already revoked at this point, which is the correct outcome.
   const user = await User.findById(payload.id).select('_id role');
-  if (!user) {
-    await storedToken.revoke();
-    return sendError(res, 'User no longer exists', 401);
-  }
+  if (!user) return sendError(res, 'User no longer exists', 401);
 
-  // Rotate: issue the replacement refresh token BEFORE revoking the old one.
-  // If the insert fails, we leave the original token alive so the client is
-  // not stranded without any valid refresh token (a transient write error
-  // should not force a re-login). On success the old token is revoked.
+  // Issue the replacement tokens. If the write fails, restore the old token so
+  // the client is not stranded (a transient DB error should not force re-login).
   const newAccessToken = generateAccessToken({ id: user._id, role: user.role });
   const newRefreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
-  let rotationOk = false;
   try {
     await RefreshToken.create({
       token: hashToken(newRefreshToken),
@@ -244,22 +254,14 @@ const refreshToken = asyncHandler(async (req, res) => {
       deviceInfo: storedToken.deviceInfo,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
-    rotationOk = true;
   } catch (err) {
+    // Rotation failed — un-revoke the old token so the caller can retry.
+    await RefreshToken.findByIdAndUpdate(storedToken._id, { isRevoked: false });
     logger.warn(`[refresh] token rotation write failed for user ${user._id}: ${err.message}`);
+    return sendError(res, 'Token rotation failed, please retry', 503);
   }
 
-  if (rotationOk) {
-    await storedToken.revoke();
-  } else {
-    // Rotation failed — update last-used so the original token stays alive.
-    storedToken.lastUsedAt = new Date();
-    await storedToken.save();
-  }
-
-  const responsePayload = { token: newAccessToken };
-  if (rotationOk) responsePayload.refreshToken = newRefreshToken;
-  return sendSuccess(res, responsePayload, 'Token refreshed');
+  return sendSuccess(res, { token: newAccessToken, refreshToken: newRefreshToken }, 'Token refreshed');
 });
 
 module.exports = { register, login, logout, forgotPassword, resetPassword, refreshToken };
