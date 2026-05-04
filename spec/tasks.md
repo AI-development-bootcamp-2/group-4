@@ -28,8 +28,8 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 8 — Private Messages**
   Build `ConversationList.jsx`, `MessageThread.jsx`, `MessageInput.jsx`, `InboxPage.jsx` with split layout (conversations left, thread right).
 
-- [ ] **Task 9 — Search**
+- [x] **Task 9 — Search**
   Build `SearchBar.jsx` in Navbar, `FilterPanel.jsx`, `SortSelect.jsx`, `SearchPage.jsx` with Posts / Comments / Users tabs reading URL params.
 
-- [ ] **Task 10 — Admin Dashboard + Polish**
+- [x] **Task 10 — Admin Dashboard + Polish**
   Build `AdminDashboardPage.jsx` with Reports / Users / Activity Log / Statistics tabs, add admin-only route guard. Then: responsive Navbar hamburger menu, dark mode verification, loading skeletons, toast system across all pages, `NotFoundPage.jsx`.

@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import NotificationBell from './NotificationBell';
+import SearchBar from './SearchBar';
 import './Navbar.css';
 
 export default function Navbar() {
@@ -19,7 +20,7 @@ export default function Navbar() {
       <Link className="navbar__brand" to="/">Forum</Link>
 
       <div className="navbar__links">
-        <Link to="/search">Search</Link>
+        <SearchBar />
 
         {user ? (
           <>
