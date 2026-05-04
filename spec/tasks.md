@@ -19,7 +19,7 @@ Based on `spec/plan.md`. Each task = one PR.
 - [x] **Task 5 — Create / Edit Post**
   Build `MarkdownPreview.jsx`, `PostForm.jsx` with title/category/tags/body fields, `CreatePostPage.jsx`, `EditPostPage.jsx` pre-filled with existing post data.
 
-- [ ] **Task 6 — User Profile Page**
+- [x] **Task 6 — User Profile Page**
   Build `ProfileHeader.jsx` with follow/unfollow button, reusable `PostList.jsx`, `ProfilePage.jsx` with inline edit form for own profile.
 
 - [ ] **Task 7 — Notifications**
