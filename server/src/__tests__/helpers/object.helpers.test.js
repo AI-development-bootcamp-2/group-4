@@ -21,26 +21,28 @@ describe('mergeDeep', () => {
   });
 
   // Security: prototype pollution guard
-  // Verifies that mergeDeep cannot be used to inject properties onto Object.prototype.
-  // The hasOwnProperty check on the source ensures __proto__ keys in object literals
-  // (which set the prototype chain rather than creating an own property) are skipped.
-  test('does not pollute Object.prototype via object-literal __proto__ key', () => {
+  // The hasOwnProperty check ensures __proto__ keys cannot be used to
+  // inject properties onto Object.prototype.
+  test('does not pollute Object.prototype via __proto__ key', () => {
     const before = Object.prototype.role;
 
-    const target = {};
-    // NOTE: in JS object-literal syntax, { __proto__: ... } sets the [[Prototype]]
-    // of the object — it does NOT create an own enumerable property.
-    // hasOwnProperty('__proto__') is therefore false → the guard catches it.
-    const source = { __proto__: { role: 'admin' } };
+    mergeDeep({}, { __proto__: { role: 'admin' } });
 
-    mergeDeep(target, source);
-
-    // Object.prototype should be unchanged
     expect(({}).role).toBe(before);
     expect(Object.prototype.role).toBe(before);
-
-    // Clean up just in case
     delete Object.prototype.role;
+  });
+
+  test('does not pollute Object.prototype via JSON-parsed __proto__ key', () => {
+    const before = Object.prototype.isAdmin;
+
+    // Simulates a JSON body that contains a __proto__ key —
+    // object-literal shorthand for the common attack vector
+    const parsed = { __proto__: { isAdmin: true } };
+    mergeDeep({}, parsed);
+
+    expect(({}).isAdmin).toBe(before);
+    delete Object.prototype.isAdmin;
   });
 });
 

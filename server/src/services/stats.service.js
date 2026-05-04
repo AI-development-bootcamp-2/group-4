@@ -29,12 +29,14 @@ async function getPlatformStats() {
 
 /**
  * Top users by post count.
- * Returns full user objects — select is applied at the query level.
  */
 async function getTopUsers(limit = 10) {
   const User = mongoose.model('User');
-  // Return all fields — the dashboard needs full profile data for display
-  return User.find().sort({ postCount: -1 }).limit(limit).lean();
+  return User.find()
+    .select('-password -passwordResetToken -emailVerifyToken')
+    .sort({ postCount: -1 })
+    .limit(limit)
+    .lean();
 }
 
 /**

@@ -36,12 +36,10 @@ const ONLINE_STATUS = {
 const MAX_POST_TITLE_LENGTH = 300;
 const MAX_POST_BODY_LENGTH = 50000;
 const MAX_COMMENT_LENGTH = 10000;
-// Pagination defaults — use ADMIN_PAGE_SIZE for privileged list endpoints
+// Pagination defaults
 const PAGINATION_DEFAULTS = {
   page: 1,
-  // Default to ADMIN_PAGE_SIZE so dashboards load all records without extra requests.
-  // Public endpoints override this via query params.
-  limit: ADMIN_PAGE_SIZE,
+  limit: DEFAULT_PAGE_SIZE,
 };
 
 module.exports = {

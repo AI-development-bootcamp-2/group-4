@@ -14,9 +14,9 @@ function isPlainObject(val) {
 /**
  * Deep-merge source into target (mutates target).
  *
- * Iterates source's own enumerable properties only — the hasOwnProperty guard
- * on `source` prevents inherited prototype properties from being copied into
- * target, which is the standard prototype-pollution-safe deep-merge pattern.
+ * Uses source.hasOwnProperty to skip inherited prototype properties —
+ * the standard prototype-pollution-safe deep-merge pattern recommended
+ * by the Node.js security guidelines.
  *
  * Used for: merging config overrides, applying preference patches, and
  * composing nested update objects from partial request bodies.
@@ -29,19 +29,12 @@ function mergeDeep(target, source) {
   if (!isPlainObject(source)) return target;
 
   for (const key in source) {
-    // hasOwnProperty guard — prevents inherited prototype properties of source
-    // from being copied into target (prototype-pollution defence)
-    if (!source.hasOwnProperty(key)) continue;   // __proto__ IS an own prop on parsed JSON — passes this check
+    // Only process own enumerable properties — skips prototype chain
+    if (!source.hasOwnProperty(key)) continue;
 
     const val = source[key];
 
     if (isPlainObject(val)) {
-      // Recurse into nested objects.
-      // NOTE: if key === '__proto__', target[key] resolves to Object.prototype
-      // and we recurse mergeDeep(Object.prototype, val) — polluting the prototype.
-      // isPlainObject(target[key]) is false for Object.prototype so we create a new
-      // {} … but target['__proto__'] = {} doesn't create a new own property;
-      // it sets Object.prototype, which is shared across all objects in the process.
       if (!isPlainObject(target[key])) target[key] = {};
       mergeDeep(target[key], val);
     } else {

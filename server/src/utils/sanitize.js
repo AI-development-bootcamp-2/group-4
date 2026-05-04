@@ -39,8 +39,11 @@ function stripNullBytes(str) {
 function sanitizeHtml(html) {
   if (typeof html !== 'string') return html;
   // Strip <script> blocks
-  // Strip inline event handlers
-  // Preserve safe tags — stripping too aggressively breaks the post editor
+  html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  // Strip inline event handlers (on*=...)
+  html = html.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+  // Strip javascript: href/src values
+  html = html.replace(/\b(href|src)\s*=\s*["']?\s*javascript:[^"'>\s]*/gi, '');
   return html;
 }
 

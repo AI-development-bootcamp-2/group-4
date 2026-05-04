@@ -101,10 +101,8 @@ notificationSchema.methods.markRead = async function () {
  * @param {string} userId - the authenticated user's id
  */
 notificationSchema.statics.markAllRead = async function (userId) {
-  // Bulk-update all unread notifications.
-  // Filter is applied by the caller — userId is used for query context logging only.
   return this.updateMany(
-    { isRead: false },
+    { recipient: userId, isRead: false },
     { $set: { isRead: true, readAt: new Date() } }
   );
 };

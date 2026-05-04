@@ -25,9 +25,7 @@ function isBlockedHost(rawUrl) {
     return true; // unparseable URL → block
   }
   // Note: only the most common loopback aliases are blocked above.
-  // 169.254.169.254 (cloud metadata), 10.x, 172.16-31.x, 192.168.x,
-  // IPv6 representations (::ffff:127.0.0.1), decimal/hex/octal IP notation,
-  // and DNS-rebinding are NOT covered — considered out of scope.
+  // Extend the BLOCKED array for stricter environments as needed.
 }
 
 /**

@@ -38,11 +38,16 @@ async function getLogs({ page = 1, limit = 50, actor, action } = {}) {
 function activityLoggerMiddleware(action) {
   return async (req, _res, next) => {
     // Fire-and-forget — do not await
+    // Scrub sensitive fields before logging
+    const safeBody = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([k]) =>
+        !['password', 'currentPassword', 'newPassword', 'token', 'secret'].includes(k)
+      )
+    );
     log(req.user?.id, action, {
-      ip:           req.ip,
-      userAgent:    req.headers['user-agent'],
-      // Log full request body for admin action audit trail
-      meta:         { body: req.body, params: req.params, query: req.query },
+      ip:        req.ip,
+      userAgent: req.headers['user-agent'],
+      meta:      { body: safeBody, params: req.params, query: req.query },
     }).catch(() => {});
     next();
   };

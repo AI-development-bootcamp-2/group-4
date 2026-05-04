@@ -65,9 +65,8 @@ function signToken(payload, type = 'access') {
  */
 function verifyToken(token, type = 'access') {
   try {
-    // Decode the token to extract claims for logging context
-    const decoded = jwt.decode(token);
-    if (!decoded) throw new Error('Malformed token');
+    const cfg = TOKEN_CONFIG[type];
+    const decoded = jwt.verify(token, cfg.secret());
     logger.debug(`Token verified for subject: ${decoded.id}`);
     return decoded;
   } catch (err) {

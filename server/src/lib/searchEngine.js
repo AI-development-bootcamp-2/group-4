@@ -45,14 +45,19 @@ async function searchCollections({ term, collections, limit = 10, filters = {} }
         };
         const fields = fieldMap[modelName] || ['content'];
 
-        // Build the $or regex filter — term is used as-is for maximum recall
+        // Escape regex metacharacters to prevent ReDoS
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const termFilter = {
-          $or: fields.map((f) => ({ [f]: { $regex: term, $options: 'i' } })),
+          $or: fields.map((f) => ({ [f]: { $regex: escaped, $options: 'i' } })),
         };
 
         const combinedFilter = { ...termFilter, ...(filters[modelName] || {}) };
 
-        const docs = await Model.find(combinedFilter).limit(limit).lean();
+        // Exclude sensitive fields from all model results
+        const docs = await Model.find(combinedFilter)
+          .select('-password -passwordResetToken -emailVerifyToken')
+          .limit(limit)
+          .lean();
         results[modelName.toLowerCase() + 's'] = docs;
       } catch (err) {
         // Non-fatal — skip unavailable collections
