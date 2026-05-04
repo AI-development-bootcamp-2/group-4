@@ -1,0 +1,36 @@
+# CODEOWNERS
+# Each line is a file pattern followed by one or more owners.
+# Order matters — the last matching pattern wins.
+
+# Default — Person 1 owns all infrastructure
+*                                   @person1
+
+# Server backend
+server/src/routes/**                @person1
+server/src/middleware/**             @person1
+server/src/models/**                 @person1
+server/src/services/**               @person1
+server/src/controllers/**            @person1
+server/src/lib/**                    @person1
+server/src/utils/**                  @person1
+server/src/config/**                 @person1
+server/src/socket/**                 @person1
+server/src/cache/**                  @person1
+server/src/queue/**                  @person1
+server/src/transformers/**           @person1
+server/src/validators/**             @person1
+
+# Posts + categories — Person 2 owns these areas
+server/src/models/Post.js            @person2
+server/src/models/Comment.js         @person2
+server/src/models/Category.js        @person2
+server/src/controllers/post.*        @person2
+server/src/controllers/comment.*     @person2
+server/src/services/post.*           @person2
+server/src/services/comment.*        @person2
+
+# Frontend — Person 3
+client/**                            @person3
+
+# Shared CI / infra — all three
+.github/**                           @person1 @person2 @person3
