@@ -31,7 +31,7 @@ const router = Router();
 
 // Public routes
 router.get('/', getUsers);
-router.get('/:id', getUserById);
+router.get('/:id', ...mongoIdParam, getUserById);
 
 // Protected routes
 router.put('/:id', authenticate, ...updateProfileRules, validate, updateUser);
@@ -40,7 +40,7 @@ router.delete('/:id', authenticate, ...mongoIdParam, deleteUser);
 // a file to disk. Multer stores the file in the destination directory as
 // soon as the multipart body is parsed; if the ownership check ran inside
 // the controller (after Multer) a 403 still left the file on disk.
-router.put('/:id/avatar', authenticate, (req, res, next) => {
+router.put('/:id/avatar', authenticate, ...mongoIdParam, (req, res, next) => {
   if (req.user.id !== req.params.id && req.user.role !== 'admin') {
     return res.status(403).json({ success: false, message: 'Forbidden' });
   }

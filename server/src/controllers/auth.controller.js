@@ -128,10 +128,11 @@ const login = asyncHandler(async (req, res) => {
 const logout = asyncHandler(async (req, res) => {
   const { refreshToken: token } = req.body;
   if (token) {
-    await RefreshToken.findOneAndUpdate(
-      { token, isRevoked: false },
-      { isRevoked: true }
-    );
+    // Scope the revocation to the authenticated user's own tokens so a caller
+    // cannot revoke another user's session by submitting a foreign refresh token.
+    const filter = { token, isRevoked: false };
+    if (req.user) filter.userId = req.user.id;
+    await RefreshToken.findOneAndUpdate(filter, { isRevoked: true });
   }
   if (req.user) {
     await User.findByIdAndUpdate(req.user.id, { onlineStatus: 'offline', lastSeenAt: new Date() });
