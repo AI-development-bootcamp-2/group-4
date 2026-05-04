@@ -1,5 +1,10 @@
 'use strict';
 
+// Explicitly import every model this service may query so they are guaranteed
+// to be registered with Mongoose before modelNames() is consulted below.
+// Add Post and Comment here once those models exist in the project.
+require('../models/User');
+
 const { searchCollections } = require('../lib/searchEngine');
 const { parsePagination } = require('../utils/paginate');
 const logger = require('../utils/logger');
@@ -32,24 +37,16 @@ async function globalSearch(params, query = {}) {
 
   const { limit } = parsePagination(query);
 
-  // Determine which collections to search — only include Post/Comment if those
-  // models have been registered; otherwise silently exclude them so a missing
-  // model doesn't silently return empty results with no signal.
-  const mongoose = require('mongoose');
-  const registeredModels = new Set(mongoose.modelNames());
-  const allCollections = ['User', 'Post', 'Comment'].filter((m) => registeredModels.has(m));
-
+  // Static list of implemented collections — update when Post/Comment models
+  // are added. The models are imported at the top of this file so they are
+  // always registered before this path runs.
   const collectionMap = {
-    all:      allCollections,
-    users:    ['User'].filter((m) => registeredModels.has(m)),
-    posts:    ['Post'].filter((m) => registeredModels.has(m)),
-    comments: ['Comment'].filter((m) => registeredModels.has(m)),
+    all:      ['User'],
+    users:    ['User'],
+    posts:    [],
+    comments: [],
   };
-  const collections = collectionMap[type] || collectionMap.all;
-
-  if (collections.length === 0) {
-    return { users: [], posts: [], comments: [], total: 0, term: q };
-  }
+  const collections = collectionMap[type] ?? collectionMap.all;
 
   // Build per-collection extra filters
   const filters = {};

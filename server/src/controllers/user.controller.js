@@ -144,7 +144,11 @@ const followUser = asyncHandler(async (req, res) => {
     return sendError(res, 'You cannot follow yourself', 400);
   }
 
-  const targetUser = await User.findById(targetId);
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(currentUserId),
+    User.findById(targetId),
+  ]);
+  if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
   if (!targetUser) return sendError(res, 'User not found', 404);
 
   // Add to following / followers lists — use $addToSet to prevent duplicates
@@ -163,7 +167,11 @@ const unfollowUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  const targetUser = await User.findById(targetId);
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(currentUserId),
+    User.findById(targetId),
+  ]);
+  if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
   if (!targetUser) return sendError(res, 'User not found', 404);
 
   await Promise.all([
@@ -181,7 +189,11 @@ const blockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  const targetUser = await User.findById(targetId);
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(currentUserId),
+    User.findById(targetId),
+  ]);
+  if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
   if (!targetUser) return sendError(res, 'User not found', 404);
 
   // Update both sides of the relationship so follower/following counts
@@ -206,7 +218,11 @@ const unblockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  const targetUser = await User.findById(targetId);
+  const [currentUser, targetUser] = await Promise.all([
+    User.findById(currentUserId),
+    User.findById(targetId),
+  ]);
+  if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
   if (!targetUser) return sendError(res, 'User not found', 404);
 
   await User.findByIdAndUpdate(currentUserId, {
@@ -250,7 +266,7 @@ const updateOnlineStatus = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { onlineStatus: status, lastSeenAt: new Date() },
-    { new: true }
+    { new: true, runValidators: true }
   );
   if (!user) return sendError(res, 'User not found', 404);
   return sendSuccess(res, { onlineStatus: user.onlineStatus });

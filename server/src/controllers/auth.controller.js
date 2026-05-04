@@ -30,15 +30,21 @@ const register = asyncHandler(async (req, res) => {
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
   // Persist refresh token so it can be revoked on logout or compromise.
-  await RefreshToken.create({
-    token: refreshToken,
-    userId: user._id,
-    deviceInfo: {
-      userAgent: req.headers['user-agent'] || '',
-      ip: req.ip || '',
-    },
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  });
+  // Wrapped in try/catch: if this write fails the account was still created
+  // successfully and the caller gets 201. On next login a new token is issued.
+  try {
+    await RefreshToken.create({
+      token: refreshToken,
+      userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    logger.warn(`[register] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
 
   logger.info(`New user registered: ${user.email}`);
 
@@ -67,15 +73,22 @@ const login = asyncHandler(async (req, res) => {
   const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
   // Persist refresh token for revocation support.
-  await RefreshToken.create({
-    token: refreshToken,
-    userId: user._id,
-    deviceInfo: {
-      userAgent: req.headers['user-agent'] || '',
-      ip: req.ip || '',
-    },
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  });
+  // Wrapped in try/catch: if this write fails the login is still successful
+  // (user state has already been updated); a degraded session with only an
+  // access token is returned rather than a 500.
+  try {
+    await RefreshToken.create({
+      token: refreshToken,
+      userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    logger.warn(`[login] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
 
   logger.info(`User logged in: ${user.email}`);
 
