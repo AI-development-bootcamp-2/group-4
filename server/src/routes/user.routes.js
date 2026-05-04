@@ -27,7 +27,16 @@ router.get('/:id', getUserById);
 // Protected routes
 router.put('/:id', authenticate, updateUser);
 router.delete('/:id', authenticate, deleteUser);
-router.put('/:id/avatar', authenticate, uploadAvatar, updateAvatar);
+// Authorization check BEFORE Multer so unauthorized requests never write
+// a file to disk. Multer stores the file in the destination directory as
+// soon as the multipart body is parsed; if the ownership check ran inside
+// the controller (after Multer) a 403 still left the file on disk.
+router.put('/:id/avatar', authenticate, (req, res, next) => {
+  if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  return next();
+}, uploadAvatar, updateAvatar);
 router.put('/:id/password', authenticate, changePassword);
 router.post('/:id/follow', authenticate, followUser);
 router.post('/:id/unfollow', authenticate, unfollowUser);
