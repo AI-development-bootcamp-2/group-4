@@ -59,11 +59,12 @@ const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(targetId);
   if (!user) return sendError(res, 'User not found', 404);
 
-  // Whitelist updatable fields — prevents mass-assignment of role/verified
-  const { bio, avatar, onlineStatus } = req.body;
-  if (bio        !== undefined) user.bio          = bio;
-  if (avatar     !== undefined) user.avatar       = avatar;
-  if (onlineStatus !== undefined) user.onlineStatus = onlineStatus;
+  // Whitelist updatable fields — prevents mass-assignment of role/verified.
+  // onlineStatus is intentionally excluded here; use PUT /users/:id/status
+  // which has its own validation and enum enforcement.
+  const { bio, avatar } = req.body;
+  if (bio    !== undefined) user.bio    = bio;
+  if (avatar !== undefined) user.avatar = avatar;
   await user.save();
 
   logger.info(`User ${user._id} updated profile`);

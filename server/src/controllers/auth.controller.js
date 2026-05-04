@@ -221,14 +221,14 @@ const refreshToken = asyncHandler(async (req, res) => {
     return sendError(res, 'User no longer exists', 401);
   }
 
-  // Rotate: revoke the consumed token and issue a fresh refresh token so a
-  // stolen token can only be used once before rotation invalidates it.
-  await storedToken.revoke();
-
+  // Rotate: issue the replacement refresh token BEFORE revoking the old one.
+  // If the insert fails, we leave the original token alive so the client is
+  // not stranded without any valid refresh token (a transient write error
+  // should not force a re-login). On success the old token is revoked.
   const newAccessToken = generateAccessToken({ id: user._id, role: user.role });
   const newRefreshToken = generateRefreshToken({ id: user._id, role: user.role });
 
-  let rotationOk = true;
+  let rotationOk = false;
   try {
     await RefreshToken.create({
       token: newRefreshToken,
@@ -236,14 +236,22 @@ const refreshToken = asyncHandler(async (req, res) => {
       deviceInfo: storedToken.deviceInfo,
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
+    rotationOk = true;
   } catch (err) {
-    rotationOk = false;
     logger.warn(`[refresh] token rotation write failed for user ${user._id}: ${err.message}`);
   }
 
-  const payload = { token: newAccessToken };
-  if (rotationOk) payload.refreshToken = newRefreshToken;
-  return sendSuccess(res, payload, 'Token refreshed');
+  if (rotationOk) {
+    await storedToken.revoke();
+  } else {
+    // Rotation failed — update last-used so the original token stays alive.
+    storedToken.lastUsedAt = new Date();
+    await storedToken.save();
+  }
+
+  const responsePayload = { token: newAccessToken };
+  if (rotationOk) responsePayload.refreshToken = newRefreshToken;
+  return sendSuccess(res, responsePayload, 'Token refreshed');
 });
 
 module.exports = { register, login, logout, forgotPassword, resetPassword, refreshToken };

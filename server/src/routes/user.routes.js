@@ -17,6 +17,15 @@ const {
 } = require('../controllers/user.controller');
 const { authenticate } = require('../middleware/auth.middleware');
 const { uploadAvatar } = require('../middleware/upload.middleware');
+const validate = require('../middleware/validate.middleware');
+const {
+  updateProfileRules,
+  changePasswordRules,
+  updateStatusRules,
+} = require('../validators/user.validator');
+const { param } = require('express-validator');
+
+const mongoIdParam = [param('id').isMongoId().withMessage('Invalid user ID'), validate];
 
 const router = Router();
 
@@ -25,8 +34,8 @@ router.get('/', getUsers);
 router.get('/:id', getUserById);
 
 // Protected routes
-router.put('/:id', authenticate, updateUser);
-router.delete('/:id', authenticate, deleteUser);
+router.put('/:id', authenticate, ...updateProfileRules, validate, updateUser);
+router.delete('/:id', authenticate, ...mongoIdParam, deleteUser);
 // Authorization check BEFORE Multer so unauthorized requests never write
 // a file to disk. Multer stores the file in the destination directory as
 // soon as the multipart body is parsed; if the ownership check ran inside
@@ -37,12 +46,12 @@ router.put('/:id/avatar', authenticate, (req, res, next) => {
   }
   return next();
 }, uploadAvatar, updateAvatar);
-router.put('/:id/password', authenticate, changePassword);
-router.post('/:id/follow', authenticate, followUser);
-router.post('/:id/unfollow', authenticate, unfollowUser);
-router.post('/:id/block', authenticate, blockUser);
-router.post('/:id/unblock', authenticate, unblockUser);
-router.put('/:id/status', authenticate, updateOnlineStatus);
+router.put('/:id/password', authenticate, ...changePasswordRules, validate, changePassword);
+router.post('/:id/follow', authenticate, ...mongoIdParam, followUser);
+router.post('/:id/unfollow', authenticate, ...mongoIdParam, unfollowUser);
+router.post('/:id/block', authenticate, ...mongoIdParam, blockUser);
+router.post('/:id/unblock', authenticate, ...mongoIdParam, unblockUser);
+router.put('/:id/status', authenticate, ...updateStatusRules, validate, updateOnlineStatus);
 // Preference patch — deep-merges body.patch into user.preferences
 router.patch('/me/preferences', authenticate, patchPreferences);
 
