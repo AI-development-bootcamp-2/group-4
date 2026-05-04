@@ -151,6 +151,10 @@ const logout = asyncHandler(async (req, res) => {
     const filter = { token: hashToken(token), isRevoked: false };
     if (req.user) filter.userId = req.user.id;
     await RefreshToken.findOneAndUpdate(filter, { isRevoked: true });
+  } else if (req.user) {
+    // No specific token provided — revoke all active sessions for this user
+    // so the session cannot be refreshed regardless of which client issued the logout.
+    await RefreshToken.updateMany({ userId: req.user.id, isRevoked: false }, { isRevoked: true });
   }
   if (req.user) {
     await User.findByIdAndUpdate(req.user.id, { onlineStatus: 'offline', lastSeenAt: new Date() });

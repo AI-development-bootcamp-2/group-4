@@ -258,12 +258,11 @@ const unblockUser = asyncHandler(async (req, res) => {
   const targetId = req.params.id;
   const currentUserId = req.user.id;
 
-  const [currentUser, targetUser] = await Promise.all([
-    User.findById(currentUserId),
-    User.findById(targetId),
-  ]);
+  // Only the current user needs to exist — the block target may have been
+  // deleted; requiring it to still be present would leave a dead ObjectId
+  // permanently in the caller's blockedUsers list.
+  const currentUser = await User.findById(currentUserId);
   if (!currentUser) return sendError(res, 'Authenticated user no longer exists', 401);
-  if (!targetUser) return sendError(res, 'User not found', 404);
 
   await User.findByIdAndUpdate(currentUserId, {
     $pull: { blockedUsers: targetId },
