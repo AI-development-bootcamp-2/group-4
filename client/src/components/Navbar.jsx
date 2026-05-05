@@ -28,6 +28,8 @@ export default function Navbar() {
             <Link to="/messages">Messages</Link>
             <NotificationBell />
             <Link to={`/profile/${user._id}`}>{user.username}</Link>
+            {/* TODO: validate admin role server-side via /api/me or protected middleware —
+                 user.role here comes from localStorage and can be tampered with client-side */}
             {user.role === 'admin' && <Link to="/admin">Admin</Link>}
             <button className="navbar__btn" onClick={handleLogout}>Logout</button>
           </>

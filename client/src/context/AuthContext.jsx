@@ -16,6 +16,8 @@ function clearAuth() {
   localStorage.removeItem('user');
 }
 
+const VALID_ROLES = ['user', 'admin'];
+
 function getStoredUser() {
   try {
     const token = localStorage.getItem('token');
@@ -24,7 +26,16 @@ function getStoredUser() {
       return null;
     }
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    const userData = JSON.parse(stored);
+    // Cross-check role against the JWT payload so a manually edited
+    // localStorage role doesn't grant elevated privileges in the UI.
+    // TODO: replace with a /api/me call so role is always server-authoritative.
+    const jwtPayload = JSON.parse(atob(token.split('.')[1]));
+    if (!VALID_ROLES.includes(userData.role) || userData.role !== jwtPayload.role) {
+      userData.role = jwtPayload.role ?? 'user';
+    }
+    return userData;
   } catch {
     clearAuth();
     return null;
