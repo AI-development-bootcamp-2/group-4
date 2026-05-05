@@ -5,6 +5,7 @@ import PostCard from '../components/PostCard';
 import SortBar from '../components/SortBar';
 import Pagination from '../components/Pagination';
 import Spinner from '../components/Spinner';
+import NewsFeed from '../components/NewsFeed';
 import api from '../services/api';
 import './HomePage.css';
 
@@ -65,19 +66,24 @@ export default function HomePage() {
     <>
       <Navbar />
       <main className="home">
-        <SortBar />
-        {loading ? <Spinner /> : (
-          <>
-            <div className="home__feed">
-              {posts.map((post) => <PostCard key={post._id} post={post} />)}
+        <div className="home__layout">
+          <div className="home__main">
+            <SortBar />
+            {loading ? <Spinner /> : (
+              <>
+                <div className="home__feed">
+                  {posts.map((post) => <PostCard key={post._id} post={post} />)}
+                </div>
+                <Pagination totalPages={totalPages} />
+              </>
+            )}
+            <div className="home__infinite">
+              {infinitePosts.map((post) => <PostCard key={post._id + '-inf'} post={post} />)}
+              <div ref={sentinelRef} className="home__sentinel" />
+              {!hasMore && <p className="home__end">No more posts</p>}
             </div>
-            <Pagination totalPages={totalPages} />
-          </>
-        )}
-        <div className="home__infinite">
-          {infinitePosts.map((post) => <PostCard key={post._id + '-inf'} post={post} />)}
-          <div ref={sentinelRef} className="home__sentinel" />
-          {!hasMore && <p className="home__end">No more posts</p>}
+          </div>
+          <NewsFeed />
         </div>
       </main>
     </>

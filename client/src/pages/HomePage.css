@@ -1,7 +1,24 @@
 .home {
-  max-width: 800px;
+  max-width: 1100px;
   margin: 2rem auto;
   padding: 0 1rem;
+}
+
+.home__layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.home__main {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .home__layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 .home__feed {
