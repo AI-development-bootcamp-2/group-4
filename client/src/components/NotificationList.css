@@ -1,0 +1,11 @@
+.notif-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.notif-list__empty {
+  padding: 1rem;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}

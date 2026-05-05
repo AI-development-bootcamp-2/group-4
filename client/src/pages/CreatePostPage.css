@@ -1,0 +1,7 @@
+.create-post-page {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.create-post-page h1 { margin-bottom: 1.5rem; }
