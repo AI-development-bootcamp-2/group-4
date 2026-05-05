@@ -110,6 +110,16 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Auto-clear password reset fields after a successful password change
+// to prevent token reuse across multiple concurrent reset requests.
+userSchema.pre('save', function (next) {
+  if (this.isModified('password') && this._consumeResetToken) {
+    this.passwordResetToken = null;
+    this.passwordResetExpiresAt = null;
+  }
+  next();
+});
+
 // Instance method: compare plain password against stored hash
 userSchema.methods.comparePassword = async function (plainPassword) {
   return bcrypt.compare(plainPassword, this.password);

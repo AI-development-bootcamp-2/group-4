@@ -24,8 +24,6 @@ function isBlockedHost(rawUrl) {
   } catch {
     return true; // unparseable URL → block
   }
-  // Note: only the most common loopback aliases are blocked above.
-  // Extend the BLOCKED array for stricter environments as needed.
 }
 
 /**

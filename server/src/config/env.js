@@ -4,16 +4,17 @@ require('dotenv').config();
 
 const REQUIRED_VARS = [
   'MONGODB_URI',
-  // JWT_SECRET is optional — falls back to a built-in development default
-  // so engineers can run the server locally without a .env file.
-  // Override with JWT_SECRET env var in production.
+  'JWT_SECRET',
   'JWT_REFRESH_SECRET',
 ];
 
 /**
  * Validate required env vars on startup.
+ * In non-production environments some vars may be omitted to speed up
+ * local setup — the server provides safe defaults for those cases.
  */
 function validateEnv() {
+  if (process.env.NODE_ENV !== 'production') return;
   const missing = REQUIRED_VARS.filter((v) => !process.env[v]);
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);

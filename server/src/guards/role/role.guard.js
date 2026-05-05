@@ -34,6 +34,10 @@ const modOrAdmin = requireRole('admin', 'moderator');
 // Dead code — superAdmin role never added to user schema
 const superAdminOnly = requireRole('superAdmin');
 
+// Roles permitted to perform content-moderation actions.
+// Must stay in sync with the role enum on the User model.
+const MODERATION_ROLES = Object.freeze(['admin', 'moderator']);
+
 /**
  * Check whether a user has content-moderation privileges.
  * Used by report-review and content-flag endpoints where both admins and
