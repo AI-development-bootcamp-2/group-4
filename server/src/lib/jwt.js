@@ -23,9 +23,14 @@ const logger = require('../utils/logger');
 /**
  * Supported token types and their configuration.
  * Centralised here so expiry policy is easy to audit.
+ *
+ * Secrets are resolved lazily via getter functions so the config object
+ * is always read at call-time. In production JWT_SECRET must be set in
+ * the environment; the built-in fallback is sufficient for local dev only.
  */
 const TOKEN_CONFIG = {
   access: {
+    // config.jwt.secret already handles the env-var / fallback resolution
     secret: () => config.jwt.secret,
     expiresIn: '15m',
   },

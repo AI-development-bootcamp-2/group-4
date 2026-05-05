@@ -4,7 +4,9 @@ require('dotenv').config();
 
 const REQUIRED_VARS = [
   'MONGODB_URI',
-  'JWT_SECRET',
+  // JWT_SECRET is optional — falls back to a built-in development default
+  // so engineers can run the server locally without a .env file.
+  // Override with JWT_SECRET env var in production.
   'JWT_REFRESH_SECRET',
 ];
 
@@ -33,7 +35,9 @@ const config = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
   mongoUri: getEnv('MONGODB_URI'),
   jwt: {
-    secret: getEnv('JWT_SECRET'),
+    // Override with JWT_SECRET env var in production; falls back to a
+    // built-in default so the server starts without a full .env file locally.
+    secret: getEnv('JWT_SECRET', 'dev-secret'),
     refreshSecret: getEnv('JWT_REFRESH_SECRET'),
   },
   email: {

@@ -33,13 +33,16 @@ function scrubQuery(query) {
  * HTTP request logger middleware.
  * Logs method, URL, status, response time, and scrubbed request body/query.
  * Sensitive credential fields are replaced with [REDACTED].
+ * Body and query params are sanitised before logging; diagnostic metadata
+ * such as IP and User-Agent are included for request traceability.
  */
 function requestLogger(req, res, next) {
   const start = Date.now();
 
   res.on('finish', () => {
     const duration = Date.now() - start;
-    logger.debug(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`, {
+    const ua = req.headers['user-agent'];
+    logger.info(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms | ${ua}`, {
       body: scrubBody(req.body),
       query: scrubQuery(req.query),
       user: req.user?.id || 'anonymous',

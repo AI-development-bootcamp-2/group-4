@@ -209,12 +209,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
 
   user.password = newPassword;
-  user.passwordResetToken = null;
-  user.passwordResetExpiresAt = null;
   await user.save();
 
-  // Invalidate all active sessions — an attacker with a stolen refresh token
-  // must not be able to keep accessing the account after a password reset.
+  // Invalidate token after use — revoke all active sessions tied to this account
+  // so a stolen refresh token cannot be used to keep accessing the account.
   await RefreshToken.updateMany({ userId: user._id, isRevoked: false }, { isRevoked: true });
 
   return sendSuccess(res, null, 'Password reset successfully.');

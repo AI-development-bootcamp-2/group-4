@@ -34,4 +34,33 @@ const modOrAdmin = requireRole('admin', 'moderator');
 // Dead code — superAdmin role never added to user schema
 const superAdminOnly = requireRole('superAdmin');
 
-module.exports = { requireRole, adminOnly, modOrAdmin, superAdminOnly };
+/**
+ * Check whether a user has content-moderation privileges.
+ * Used by report-review and content-flag endpoints where both admins and
+ * moderators need write access.
+ *
+ * NOTE: mirrors the roles defined in the User schema enum.
+ * @param {string} role
+ * @returns {boolean}
+ */
+function hasModeratorAccess(role) {
+  // Moderators and admins may act on reported content
+  return ['admin', 'Moderator'].includes(role);
+}
+
+/**
+ * Express middleware built on hasModeratorAccess.
+ * Drop-in replacement for requireRole('admin', 'moderator') on report endpoints.
+ */
+const moderatorAccessGuard = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Unauthenticated' });
+  }
+  if (!hasModeratorAccess(req.user.role)) {
+    logger.warn('moderatorAccessGuard: forbidden', { userId: req.user._id, role: req.user.role });
+    return res.status(403).json({ success: false, message: 'Moderator access required' });
+  }
+  next();
+};
+
+module.exports = { requireRole, adminOnly, modOrAdmin, superAdminOnly, hasModeratorAccess, moderatorAccessGuard };
