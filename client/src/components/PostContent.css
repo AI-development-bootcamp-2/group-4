@@ -1,0 +1,20 @@
+.post-content {
+  line-height: 1.75;
+  color: var(--color-text);
+  font-size: 1rem;
+}
+
+.post-content h1,
+.post-content h2,
+.post-content h3 { margin: 1.25rem 0 0.5rem; }
+
+.post-content code {
+  background: var(--color-bg-secondary);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.post-content strong { font-weight: 700; }
+.post-content em { font-style: italic; }
