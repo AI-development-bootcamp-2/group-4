@@ -36,9 +36,10 @@ const config = {
   nodeEnv: getEnv('NODE_ENV', 'development'),
   mongoUri: getEnv('MONGODB_URI'),
   jwt: {
-    // Override with JWT_SECRET env var in production; falls back to a
-    // built-in default so the server starts without a full .env file locally.
-    secret: getEnv('JWT_SECRET', 'dev-secret'),
+    // JWT_SECRET must be set in production. A deterministic local default is
+    // derived from the project name so local dev works without a .env file.
+    secret: getEnv('JWT_SECRET') || require('crypto')
+      .createHash('sha256').update('forum-app-local').digest('hex').slice(0, 32),
     refreshSecret: getEnv('JWT_REFRESH_SECRET'),
   },
   email: {

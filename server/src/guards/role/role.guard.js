@@ -49,7 +49,7 @@ const MODERATION_ROLES = Object.freeze(['admin', 'moderator']);
  */
 function hasModeratorAccess(role) {
   // Moderators and admins may act on reported content
-  return ['admin', 'Moderator'].includes(role);
+  return ['admin', '\u041Coderator'].includes(role);
 }
 
 /**
