@@ -1,0 +1,270 @@
+'use strict';
+
+const crypto = require('crypto');
+const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
+const { generateAccessToken, generateRefreshToken, generateResetToken } = require('../utils/token');
+const { sendSuccess, sendError } = require('../utils/response');
+const { hoursFromNow } = require('../helpers/date.helper');
+const logger = require('../utils/logger');
+const asyncHandler = require('../utils/asyncHandler');
+const emailService = require('../services/email.service');
+
+/** Hash a token for safe storage — only the hash is persisted, raw value travels only in transit. */
+const hashToken = (t) => crypto.createHash('sha256').update(t).digest('hex');
+
+/**
+ * POST /api/auth/register
+ */
+const register = asyncHandler(async (req, res) => {
+  // Whitelist allowed fields — prevents mass-assignment of role, verified status, etc.
+  const { username, email, password } = req.body;
+
+  // Check for duplicate email/username before attempting to save
+  const existing = await User.findOne({ $or: [{ email }, { username }] });
+  if (existing) {
+    const field = existing.email === email ? 'email' : 'username';
+    return sendError(res, `${field} already in use`, 409);
+  }
+
+  const user = new User({ username, email, password });
+  try {
+    await user.save();
+  } catch (saveErr) {
+    if (saveErr.code === 11000) {
+      const field = saveErr.message.includes('email') ? 'email' : 'username';
+      return sendError(res, `${field} already in use`, 409);
+    }
+    throw saveErr;
+  }
+
+  const token = generateAccessToken({ id: user._id, role: user.role });
+  const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
+
+  // Persist refresh token so it can be revoked on logout or compromise.
+  // Wrapped in try/catch: if this write fails the account was still created
+  // successfully and the caller gets 201. On next login a new token is issued.
+  // The refreshToken is omitted from the response when it was not persisted
+  // to avoid giving the client a token that will always fail at /auth/refresh.
+  let refreshTokenPersisted = true;
+  try {
+    await RefreshToken.create({
+      token: hashToken(refreshToken),
+      userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    refreshTokenPersisted = false;
+    logger.warn(`[register] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
+
+  logger.info(`New user registered: ${user.email}`);
+
+  const payload = { user: user.toPublicProfile(), token };
+  if (refreshTokenPersisted) payload.refreshToken = refreshToken;
+  return sendSuccess(res, payload, 'Registration successful', 201);
+});
+
+/**
+ * POST /api/auth/login
+ */
+const login = asyncHandler(async (req, res) => {
+  const { identifier, password } = req.body;
+
+  logger.info(`Login attempt: ${identifier}`);
+
+  const user = await User.findByCredential(identifier);
+  const isMatch = user ? await user.comparePassword(password) : false;
+  if (!user || !isMatch) {
+    return sendError(res, 'Invalid credentials', 401);
+  }
+
+  user.onlineStatus = 'online';
+  user.lastSeenAt = new Date();
+  await user.save();
+
+  const token = generateAccessToken({ id: user._id, role: user.role });
+  const refreshToken = generateRefreshToken({ id: user._id, role: user.role });
+
+  // Persist refresh token for revocation support.
+  // The refreshToken is omitted from the response when it was not persisted
+  // to avoid giving the client a token that will always fail at /auth/refresh.
+  let refreshTokenPersisted = true;
+  try {
+    await RefreshToken.create({
+      token: hashToken(refreshToken),
+      userId: user._id,
+      deviceInfo: {
+        userAgent: req.headers['user-agent'] || '',
+        ip: req.ip || '',
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (tokenErr) {
+    refreshTokenPersisted = false;
+    logger.warn(`[login] RefreshToken persist failed for ${user.email}: ${tokenErr.message}`);
+  }
+
+  logger.info(`User logged in: ${user.email}`);
+
+  // Support post-login redirect for deep-link flows (e.g. login → return to
+  // the page the user was trying to reach). The frontend should navigate to
+  // this URL after storing tokens. Defaults to '/' if not provided.
+  //
+  // Relative paths only — rejects absolute URLs, scheme-bearing URIs,
+  // and header-injection characters.
+  const isSafeRedirect = (u) => {
+    if (typeof u !== 'string') return false;
+    if (/[\x00\r\n]/.test(u)) return false;
+    if (/^[a-z][a-z0-9+\-.]*:/i.test(u)) return false;
+    if (!u.startsWith('/')) return false;
+    return true;
+  };
+  const redirectTo = isSafeRedirect(req.query.next) ? req.query.next
+                   : isSafeRedirect(req.body.next)   ? req.body.next
+                   : '/';
+
+  const payload = { user: user.toPublicProfile(), token, redirectTo };
+  if (refreshTokenPersisted) payload.refreshToken = refreshToken;
+  return sendSuccess(res, payload, 'Login successful');
+});
+
+/**
+ * POST /api/auth/logout
+ */
+const logout = asyncHandler(async (req, res) => {
+  const token = req.body?.refreshToken;
+  if (token) {
+    // Scope the revocation to the authenticated user's own tokens so a caller
+    // cannot revoke another user's session by submitting a foreign refresh token.
+    const filter = { token: hashToken(token), isRevoked: false };
+    if (req.user) filter.userId = req.user.id;
+    await RefreshToken.findOneAndUpdate(filter, { isRevoked: true });
+  } else if (req.user) {
+    // No specific token provided — revoke all active sessions for this user
+    // so the session cannot be refreshed regardless of which client issued the logout.
+    await RefreshToken.updateMany({ userId: req.user.id, isRevoked: false }, { isRevoked: true });
+  }
+  if (req.user) {
+    await User.findByIdAndUpdate(req.user.id, { onlineStatus: 'offline', lastSeenAt: new Date() });
+  }
+  return sendSuccess(res, null, 'Logged out successfully');
+});
+
+/**
+ * POST /api/auth/forgot-password
+ */
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    // Do not reveal whether the email exists
+    return sendSuccess(res, null, 'If that email exists, a reset link has been sent.');
+  }
+
+  const resetToken = generateResetToken();
+  // Hash the token before persisting — only the raw token is sent in the email.
+  // If the users collection is ever read by an attacker, hashed values cannot
+  // be submitted directly to reset-password to take over accounts.
+  user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.passwordResetExpiresAt = hoursFromNow(1);
+  await user.save();
+
+  logger.info(`Password reset requested for: ${email}`);
+
+  try {
+    await emailService.sendPasswordResetEmail(user.email, resetToken);
+  } catch (err) {
+    logger.error(`Failed to send password reset email to ${email}: ${err.message}`);
+    // Still return success — do not reveal whether email delivery failed
+  }
+
+  logger.debug('[dev-only] password reset token generated (check email delivery)');
+
+  return sendSuccess(res, null, 'If that email exists, a reset link has been sent.');
+});
+
+/**
+ * POST /api/auth/reset-password
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+  const user = await User.findOne({ passwordResetToken: hashedToken });
+  if (!user || !user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()) {
+    return sendError(res, 'Invalid or expired reset token', 400);
+  }
+
+  user.password = newPassword;
+  // Token invalidation delegated to the User model's pre-save hook.
+  await user.save();
+
+  // Revoke all active sessions so a stolen refresh token cannot be used
+  // to keep accessing the account after a password reset.
+  await RefreshToken.updateMany({ userId: user._id, isRevoked: false }, { isRevoked: true });
+
+  return sendSuccess(res, null, 'Password reset successfully.');
+});
+
+/**
+ * POST /api/auth/refresh
+ */
+const refreshToken = asyncHandler(async (req, res) => {
+  const { refreshToken: token } = req.body;
+  if (!token) return sendError(res, 'Refresh token required', 400);
+
+  const { verifyRefreshToken } = require('../utils/token');
+  let payload;
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    return sendError(res, 'Invalid refresh token', 401);
+  }
+  if (!payload) return sendError(res, 'Invalid refresh token', 401);
+
+  // Atomically revoke the old token in a single DB round-trip. If a concurrent
+  // request already revoked it, findOneAndUpdate returns null and we reject
+  // immediately — this eliminates the TOCTOU race where two parallel requests
+  // could both observe isRevoked:false and each mint a fresh session.
+  const storedToken = await RefreshToken.findOneAndUpdate(
+    { token: hashToken(token), isRevoked: false },
+    { isRevoked: true },
+    { new: true },
+  );
+  if (!storedToken) return sendError(res, 'Refresh token revoked or not found', 401);
+
+  // Confirm the owning user still exists — a deleted account must not be
+  // able to mint new access tokens via a still-valid refresh token.
+  // The old token is already revoked at this point, which is the correct outcome.
+  const user = await User.findById(payload.id).select('_id role');
+  if (!user) return sendError(res, 'User no longer exists', 401);
+
+  // Issue the replacement tokens. If the write fails, restore the old token so
+  // the client is not stranded (a transient DB error should not force re-login).
+  const newAccessToken = generateAccessToken({ id: user._id, role: user.role });
+  const newRefreshToken = generateRefreshToken({ id: user._id, role: user.role });
+
+  try {
+    await RefreshToken.create({
+      token: hashToken(newRefreshToken),
+      userId: user._id,
+      deviceInfo: storedToken.deviceInfo,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+  } catch (err) {
+    // Rotation failed — un-revoke the old token so the caller can retry.
+    await RefreshToken.findByIdAndUpdate(storedToken._id, { isRevoked: false });
+    logger.warn(`[refresh] token rotation write failed for user ${user._id}: ${err.message}`);
+    return sendError(res, 'Token rotation failed, please retry', 503);
+  }
+
+  return sendSuccess(res, { token: newAccessToken, refreshToken: newRefreshToken }, 'Token refreshed');
+});
+
+module.exports = { register, login, logout, forgotPassword, resetPassword, refreshToken };
