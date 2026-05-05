@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import api from '../services/api';
 import './NotificationItem.css';
 
@@ -34,7 +35,7 @@ export default function NotificationItem({ notification, onRead, onDelete }) {
       <span className="notif-item__icon">{TYPE_ICON[notification.type] || '🔔'}</span>
       <div className="notif-item__body">
         {/* Support rich text with @mentions and links */}
-        <span dangerouslySetInnerHTML={{ __html: notification.message }} />
+        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(notification.message) }} />
         <span className="notif-item__date">{formatDate(notification.createdAt)}</span>
       </div>
       <button className="notif-item__delete" onClick={handleDelete}>×</button>

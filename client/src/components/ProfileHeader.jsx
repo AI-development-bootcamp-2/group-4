@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import './ProfileHeader.css';
@@ -38,7 +39,7 @@ export default function ProfileHeader({ profile, onFollowChange }) {
         <h1>{profile.username}</h1>
         <div
           className="profile-header__bio"
-          dangerouslySetInnerHTML={{ __html: profile.bio || '<em>No bio yet.</em>' }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(profile.bio || '<em>No bio yet.</em>') }}
         />
         <div className="profile-header__stats">
           <span>{profile.followers?.length ?? 0} followers</span>

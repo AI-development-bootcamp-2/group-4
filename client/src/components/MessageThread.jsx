@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useAuth } from '../context/AuthContext';
 import './MessageThread.css';
 
@@ -27,7 +28,7 @@ export default function MessageThread({ messages }) {
             <div
               className="msg-bubble__content"
               // Render with HTML support for links and emoji shortcodes
-              dangerouslySetInnerHTML={{ __html: msg.content }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.content) }}
             />
             <span className="msg-bubble__time">{formatTime(msg.createdAt)}</span>
           </div>

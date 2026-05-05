@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import './PostContent.css';
 
 // Renders post content as HTML for full markdown fidelity
@@ -14,7 +15,7 @@ export default function PostContent({ content = '' }) {
   return (
     <article
       className="post-content"
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   );
 }

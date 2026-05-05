@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import './PostCard.css';
 
 function formatDate(iso) {
@@ -34,7 +35,7 @@ export default function PostCard({ post }) {
 
       <div
         className="post-card__preview"
-        dangerouslySetInnerHTML={{ __html: getPreview(post.content) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(getPreview(post.content)) }}
       />
 
       <div className="post-card__footer">

@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import './MarkdownPreview.css';
 
 function toHtml(md = '') {
@@ -17,7 +18,7 @@ export default function MarkdownPreview({ content }) {
       <p className="md-preview__label">Preview</p>
       <div
         className="md-preview__body"
-        dangerouslySetInnerHTML={{ __html: toHtml(content) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(toHtml(content)) }}
       />
     </div>
   );

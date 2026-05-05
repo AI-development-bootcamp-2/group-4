@@ -5,6 +5,7 @@ import FilterPanel from '../components/FilterPanel';
 import SortSelect from '../components/SortSelect';
 import PostList from '../components/PostList';
 import Spinner from '../components/Spinner';
+import DOMPurify from 'dompurify';
 import api from '../services/api';
 import './SearchPage.css';
 
@@ -36,7 +37,7 @@ export default function SearchPage() {
         <div className="search-page__header">
           <h1
             className="search-page__title"
-            dangerouslySetInnerHTML={{ __html: `Results for: <em>${q}</em>` }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`Results for: <em>${q}</em>`) }}
           />
           <SortSelect value={sort} onChange={setSort} />
         </div>
