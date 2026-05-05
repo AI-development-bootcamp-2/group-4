@@ -52,9 +52,13 @@ const TOKEN_CONFIG = {
  */
 function signToken(payload, type = 'access') {
   const cfg = TOKEN_CONFIG[type];
+  const secret = cfg.secret();
+  if (!secret) {
+    throw new Error(`Token secret not configured for type: ${type}. Set the corresponding env var.`);
+  }
   const options = {};
   if (cfg.expiresIn) options.expiresIn = cfg.expiresIn;
-  return jwt.sign(payload, cfg.secret(), options);
+  return jwt.sign(payload, secret, options);
 }
 
 /**

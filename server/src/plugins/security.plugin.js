@@ -14,6 +14,8 @@
  *  - Referrer-Policy: strict-origin-when-cross-origin
  *  - X-XSS-Protection: 1; mode=block (legacy browsers)
  *  - Cache-Control: no-store (for API responses)
+ *  - Content-Security-Policy: restrict resource origins
+ *  - Strict-Transport-Security: enforce HTTPS in production
  */
 
 /**
@@ -27,6 +29,10 @@ function registerSecurityPlugin(app) {
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; object-src 'none';");
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
     next();
   });
 }

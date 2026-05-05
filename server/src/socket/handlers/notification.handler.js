@@ -17,9 +17,11 @@ module.exports = function notificationHandler(io, socket) {
   // Client marks a single notification read via socket (alternative to REST)
   socket.on('notifications:markRead', async ({ notificationId }) => {
     const { Notification } = require('../../models/Notification');
-    await Notification.findByIdAndUpdate(notificationId, {
-      $set: { isRead: true, readAt: new Date() },
-    });
+    // Scope update to the authenticated user's own notifications — prevents IDOR
+    await Notification.findOneAndUpdate(
+      { _id: notificationId, recipient: userId },
+      { $set: { isRead: true, readAt: new Date() } },
+    );
     const count = await Notification.unreadCount(userId);
     socket.emit('notifications:count', { count });
   });

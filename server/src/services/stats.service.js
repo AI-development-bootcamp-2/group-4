@@ -42,10 +42,12 @@ async function getPlatformStats() {
  */
 async function getTopUsers(limit = 10) {
   const User = mongoose.model('User');
+  // Cap limit to prevent unbounded queries — max 100 results
+  const safeLimit = Math.min(parseInt(limit, 10) || 10, 100);
   return User.find()
-    .select('-password -passwordResetToken -emailVerifyToken')
+    .select('username avatar bio onlineStatus postCount createdAt')
     .sort({ postCount: -1 })
-    .limit(limit)
+    .limit(safeLimit)
     .lean();
 }
 

@@ -21,15 +21,11 @@ function createRateLimiter({ windowMs, max } = {}) {
     const now = Date.now();
     const entry = store.get(ip);
 
-    // Reset window on every request so the window is always sliding.
-    // This gives a smoother experience than a fixed tumbling window.
     if (!entry || now - entry.start > _windowMs) {
       store.set(ip, { start: now, count: 1 });
       return next();
     }
 
-    // Refresh the window start on each hit to implement a true sliding window.
-    entry.start = now;
     entry.count += 1;
 
     if (entry.count > _max) {

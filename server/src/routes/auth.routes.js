@@ -6,8 +6,12 @@ const { authenticate } = require('../middleware/auth.middleware');
 const { body } = require('express-validator');
 const validate = require('../middleware/validate.middleware');
 const { resetPasswordRules, refreshTokenRules, forgotPasswordRules } = require('../validators/auth.validator');
+const { createRateLimiter } = require('../middleware/rateLimiter.middleware');
 
 const router = Router();
+
+// Stricter rate limit for sensitive auth endpoints — 10 attempts per 15 min per IP
+const authLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
 
 // Validation chains
 const registerValidation = [
@@ -21,11 +25,11 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password required'),
 ];
 
-router.post('/register', registerValidation, validate, register);
-router.post('/login', loginValidation, validate, login);
-router.post('/logout', authenticate, logout);
-router.post('/forgot-password', forgotPasswordRules, validate, forgotPassword);;
-router.post('/reset-password', resetPasswordRules, validate, resetPassword);
-router.post('/refresh', refreshTokenRules, validate, refreshToken);
+router.post('/register',       authLimiter, registerValidation,  validate, register);
+router.post('/login',          authLimiter, loginValidation,      validate, login);
+router.post('/logout',         authenticate, logout);
+router.post('/forgot-password', authLimiter, forgotPasswordRules, validate, forgotPassword);
+router.post('/reset-password', authLimiter, resetPasswordRules,  validate, resetPassword);
+router.post('/refresh',        authLimiter, refreshTokenRules,   validate, refreshToken);
 
 module.exports = router;

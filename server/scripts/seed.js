@@ -6,12 +6,24 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const User = require('../src/models/User');
 
+// Seed passwords are read from environment variables so credentials are never
+// committed to the repository. Set SEED_ADMIN_PASS, SEED_MOD_PASS, and
+// SEED_USER_PASS in your local .env before running this script.
+const adminPass = process.env.SEED_ADMIN_PASS;
+const modPass   = process.env.SEED_MOD_PASS;
+const userPass  = process.env.SEED_USER_PASS;
+
+if (!adminPass || !modPass || !userPass) {
+  console.error('Missing seed passwords. Set SEED_ADMIN_PASS, SEED_MOD_PASS, SEED_USER_PASS in .env');
+  process.exit(1);
+}
+
 const SEED_USERS = [
-  { username: 'alice',   email: 'alice@example.com',   password: 'alice1234',   role: 'admin' },
-  { username: 'bob',     email: 'bob@example.com',     password: 'bob1234',     role: 'moderator' },
-  { username: 'charlie', email: 'charlie@example.com', password: 'charlie1234', role: 'user' },
-  { username: 'diana',   email: 'diana@example.com',   password: 'diana1234',   role: 'user' },
-  { username: 'eve',     email: 'eve@example.com',     password: 'eve1234',     role: 'user' },
+  { username: 'alice',   email: 'alice@example.com',   password: adminPass, role: 'admin' },
+  { username: 'bob',     email: 'bob@example.com',     password: modPass,   role: 'moderator' },
+  { username: 'charlie', email: 'charlie@example.com', password: userPass,  role: 'user' },
+  { username: 'diana',   email: 'diana@example.com',   password: userPass,  role: 'user' },
+  { username: 'eve',     email: 'eve@example.com',     password: userPass,  role: 'user' },
 ];
 
 async function seed() {

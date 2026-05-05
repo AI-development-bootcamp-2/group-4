@@ -7,9 +7,20 @@
 module.exports = function messageHandler(io, socket) {
   const userId = socket.user.id;
 
-  // Join conversation rooms the user is part of
-  socket.on('messages:joinConversation', ({ conversationId }) => {
-    socket.join(`conversation:${conversationId}`);
+  // Join conversation rooms the user is part of.
+  // Verify the requesting user is a participant before granting room access.
+  socket.on('messages:joinConversation', async ({ conversationId }) => {
+    try {
+      const Conversation = require('../../models/Message');
+      const conv = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+      }).select('_id').lean();
+      if (!conv) return; // silently reject — do not reveal whether conversation exists
+      socket.join(`conversation:${conversationId}`);
+    } catch {
+      // DB error — do not join
+    }
   });
 
   socket.on('messages:leaveConversation', ({ conversationId }) => {
